@@ -185,51 +185,6 @@
     z-index: 100;
   }
   .saved-toast.show { transform: translateX(-50%) translateY(0); }
-
-  /* ---------- SINCRONIZAÇÃO ---------- */
-  .sync-pill{
-    margin-top:8px;
-    display:inline-flex; align-items:center; gap:7px;
-    background:none;
-    border:1px solid #2d4a6b;
-    color:#9db4cc;
-    font-family:inherit;
-    font-size:12px;
-    padding:4px 11px;
-    border-radius:999px;
-    cursor:pointer;
-  }
-  .sync-pill::before{
-    content:''; width:7px; height:7px; border-radius:50%;
-    background:#9db4cc; flex-shrink:0;
-  }
-  .sync-pill[data-estado="ok"]::before{ background:#66bb6a; }
-  .sync-pill[data-estado="salvando"]::before{ background:#ffb74d; }
-  .sync-pill[data-estado="offline"]::before{ background:#4fc3f7; }
-  .sync-pill[data-estado="erro"]::before{ background:#ef5350; }
-  .sync-pill[data-estado="desconectado"]{ color:#ffb74d; border-color:#ffb74d; }
-  .sync-pill[data-estado="desconectado"]::before{ background:#ffb74d; }
-  .sync-pill:focus-visible{ outline:2px solid #e8edf4; outline-offset:2px; }
-  .sync-banner{
-    position:fixed; left:12px; right:12px;
-    bottom:calc(16px + env(safe-area-inset-bottom, 0px));
-    max-width:560px; margin:0 auto;
-    display:none; align-items:center; justify-content:space-between; gap:10px;
-    background:#17273c;
-    border:1px solid #ffb74d;
-    border-radius:12px;
-    color:#e8edf4;
-    font-size:14px;
-    padding:10px 12px;
-    z-index:1000;
-  }
-  .sync-banner.show{ display:flex; }
-  .sync-banner button{
-    background:#ffb74d; color:#0f1b2b; border:none;
-    border-radius:8px;
-    font-family:inherit; font-weight:600; font-size:13px;
-    padding:7px 12px; cursor:pointer; flex-shrink:0;
-  }
 </style>
 </head>
 <body>
@@ -237,7 +192,6 @@
 <header>
   <h1>💰 Horas &amp; Adicionais</h1>
   <p>Horas extras · adicional noturno · periculosidade</p>
-  <button type="button" class="sync-pill" id="sync-pill" data-estado="desconectado">Carregando…</button>
 </header>
 
 <div class="tabs">
@@ -269,6 +223,11 @@
         <input type="checkbox" id="pontoNotificar" onchange="alternarNotificacaoPonto()">
         <label for="pontoNotificar">🔔 Avisar quando começar/mudar hora extra</label>
       </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="pontoNotificarFixa" onchange="alternarNotificacaoFixaPonto()">
+        <label for="pontoNotificarFixa">📌 Notificação fixa com a contagem (aparece na tela bloqueada)</label>
+      </div>
+      <div class="hint">A notificação fixa se atualiza sozinha enquanto o turno estiver rodando, mesmo com o celular bloqueado. Ela desaparece ao finalizar ou cancelar o turno.</div>
       <div class="field">
         <label>Entrada</label>
         <input type="datetime-local" id="pontoEntradaInput" onchange="pontoEntradaAlterada()">
@@ -533,36 +492,6 @@
 
 <div class="saved-toast" id="toast">Configurações salvas ✓</div>
 
-<script>
-// ---------- SINCRONIZAÇÃO: captura as gravações locais (roda antes do app) ----------
-window.__SYNC = {
-  app: "horas-adicionais",
-  keys: [
-      "horasApp_config_v1",
-      "horasApp_registros_v1",
-      "horasApp_pontoAtivo_v1",
-      "horasApp_turnoPontoSelecionado_v1"
-  ],
-  pendentes: {},
-  aplicandoRemoto: false,
-  onLocalChange: null
-};
-(function(){
-  const S = window.__SYNC;
-  const set = Storage.prototype.setItem;
-  const rem = Storage.prototype.removeItem;
-  S.setItemOriginal = set;
-  S.removeItemOriginal = rem;
-  function marcar(storage, k, v){
-    if(storage === window.localStorage && !S.aplicandoRemoto && S.keys.includes(k)){
-      S.pendentes[k] = v;
-      if(S.onLocalChange) S.onLocalChange();
-    }
-  }
-  Storage.prototype.setItem = function(k, v){ set.call(this, k, v); marcar(this, k, String(v)); };
-  Storage.prototype.removeItem = function(k){ rem.call(this, k); marcar(this, k, null); };
-})();
-</script>
 <script>
 const STORAGE_KEY = 'horasApp_config_v1';
 const CARDS_COLAPSADOS_KEY = 'horasApp_cardsColapsados_v1';
@@ -1283,8 +1212,11 @@ function atualizarCalculoAoVivo(inicio) {
 }
 
 const PONTO_NOTIFICAR_KEY = 'horasApp_pontoNotificar_v1';
+const PONTO_NOTIFICAR_FIXA_KEY = 'horasApp_pontoNotificarFixa_v1';
+const PONTO_NOTIFICACAO_FIXA_TAG = 'horas-adicionais-ponto-fixa';
 let ultimaCategoriaPonto = null;
 let primeiraChecagemPonto = true;
+let notificacaoFixaAtiva = false;
 
 function alternarNotificacaoPonto() {
   const checkbox = document.getElementById('pontoNotificar');
@@ -1296,6 +1228,55 @@ function alternarNotificacaoPonto() {
     });
   }
   localStorage.setItem(PONTO_NOTIFICAR_KEY, checkbox.checked ? '1' : '0');
+}
+
+function alternarNotificacaoFixaPonto() {
+  const checkbox = document.getElementById('pontoNotificarFixa');
+  if (checkbox.checked && 'Notification' in window && Notification.permission !== 'granted') {
+    Notification.requestPermission().then(perm => {
+      if (perm !== 'granted') {
+        alert('Permissão de notificação negada. Sem permissão, a notificação fixa não aparece, nem na tela bloqueada.');
+        checkbox.checked = false;
+        localStorage.setItem(PONTO_NOTIFICAR_FIXA_KEY, '0');
+      } else if (localStorage.getItem(PONTO_KEY)) {
+        atualizarNotificacaoFixaPonto();
+      }
+    });
+  }
+  localStorage.setItem(PONTO_NOTIFICAR_FIXA_KEY, checkbox.checked ? '1' : '0');
+  if (!checkbox.checked) fecharNotificacaoFixaPonto();
+}
+
+// Atualiza (ou cria) uma notificação com tag fixa: usando o mesmo tag + renotify:false,
+// o navegador substitui o conteúdo da notificação existente em vez de criar uma nova a
+// cada vez — por isso ela funciona como um "contador" que fica na tela bloqueada e só
+// troca o texto, sem vibrar/alertar de novo a cada atualização.
+let notificacaoFixaAtual = null;
+
+function atualizarNotificacaoFixaPonto(elapsedTexto, valorTexto, categoriaTexto) {
+  const ligada = localStorage.getItem(PONTO_NOTIFICAR_FIXA_KEY) === '1';
+  if (!ligada) return;
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  try {
+    const linhas = [elapsedTexto || ''];
+    if (valorTexto) linhas[0] += ' · ' + valorTexto;
+    if (categoriaTexto) linhas.push(categoriaTexto);
+    notificacaoFixaAtual = new Notification('⏱️ Turno em andamento', {
+      body: linhas.join('\n'),
+      tag: PONTO_NOTIFICACAO_FIXA_TAG,
+      renotify: false,
+      silent: true
+    });
+    notificacaoFixaAtiva = true;
+  } catch (e) {}
+}
+
+function fecharNotificacaoFixaPonto() {
+  notificacaoFixaAtiva = false;
+  if (notificacaoFixaAtual) {
+    try { notificacaoFixaAtual.close(); } catch (e) {}
+    notificacaoFixaAtual = null;
+  }
 }
 
 function categoriaAgora(forcarFeriado) {
@@ -1384,9 +1365,18 @@ function atualizarUIPonto() {
       }
 
       const minutos = Math.floor((Date.now() - inicioAtual) / 60000);
-      document.getElementById('pontoElapsed').textContent = fmtHM(Math.max(minutos, 0) / 60);
+      const elapsedTexto = fmtHM(Math.max(minutos, 0) / 60);
+      document.getElementById('pontoElapsed').textContent = elapsedTexto;
       atualizarCalculoAoVivo(inicioAtual);
       checarMudancaCategoria(document.getElementById('pontoFeriado').checked);
+
+      const valorLive = document.getElementById('pontoValorAoVivo');
+      const categoriaBadge = document.getElementById('pontoCategoriaAtual');
+      atualizarNotificacaoFixaPonto(
+        elapsedTexto,
+        valorLive ? valorLive.textContent : '',
+        categoriaBadge ? categoriaBadge.textContent : ''
+      );
     };
 
     tick();
@@ -1398,6 +1388,7 @@ function atualizarUIPonto() {
     const selectTurno = document.getElementById('turnoPontoSelect');
     if (selectTurno) selectTurno.disabled = false;
     liberarWakeLockPonto();
+    fecharNotificacaoFixaPonto();
   }
 }
 
@@ -2194,6 +2185,7 @@ inicializarCardsColapsaveis();
 popularSelectTurno();
 aplicarAparenciaPonto();
 document.getElementById('pontoNotificar').checked = localStorage.getItem(PONTO_NOTIFICAR_KEY) === '1';
+document.getElementById('pontoNotificarFixa').checked = localStorage.getItem(PONTO_NOTIFICAR_FIXA_KEY) === '1';
 atualizarUIPonto();
 if (!document.getElementById('dataRegistro').value) {
   document.getElementById('dataRegistro').valueAsDate = new Date();
@@ -2220,207 +2212,6 @@ const manifestUrl = 'data:application/manifest+json;base64,' + btoa(unescape(enc
 document.getElementById('manifest-placeholder').setAttribute('href', manifestUrl);
 document.getElementById('icon-placeholder').setAttribute('href', iconUrl);
 document.getElementById('apple-icon-placeholder').setAttribute('href', iconUrl);
-</script>
-
-<div class="sync-banner" id="sync-banner" role="status">
-  <span>Dados atualizados em outro aparelho.</span>
-  <button type="button" id="sync-banner-btn">Atualizar</button>
-</div>
-
-<script type="module">
-// ---------- SINCRONIZAÇÃO COM FIREBASE ----------
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, setDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyAt0CxL9DxHCtcqOvqBLew6kRUPPFNMMj4",
-  authDomain: "central-apps-fad36.firebaseapp.com",
-  projectId: "central-apps-fad36",
-  storageBucket: "central-apps-fad36.firebasestorage.app",
-  messagingSenderId: "20651310911",
-  appId: "1:20651310911:web:4bf86f56e0e0a60ff75d8a"
-};
-
-const S = window.__SYNC;
-const pill = document.getElementById('sync-pill');
-const banner = document.getElementById('sync-banner');
-const PEND_KEY = '__sync_pendentes_' + S.app;
-
-function status(texto, estado){
-  pill.textContent = texto;
-  pill.dataset.estado = estado;
-}
-
-let app, auth, db;
-try{
-  app = initializeApp(firebaseConfig);
-  auth = getAuth(app);
-  db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
-}catch(e){
-  console.error(e);
-  status('Sincronização indisponível', 'erro');
-}
-
-let usuario = null;
-let ref = null;
-let pararEscuta = null;
-let timer = null;
-let primeiraLeitura = true;
-let usuarioInteragiu = false;
-
-['pointerdown','keydown'].forEach(ev => window.addEventListener(ev, () => { usuarioInteragiu = true; }, { passive:true }));
-
-// Guarda quais chaves ainda não subiram (sobrevive a fechar o app)
-function gravarListaPendentes(){
-  S.setItemOriginal.call(localStorage, PEND_KEY, JSON.stringify(Object.keys(S.pendentes)));
-}
-try{
-  JSON.parse(localStorage.getItem(PEND_KEY) || '[]').forEach(k => {
-    if(S.keys.includes(k)) S.pendentes[k] = localStorage.getItem(k);
-  });
-}catch(e){}
-
-S.onLocalChange = () => {
-  gravarListaPendentes();
-  agendarEnvio();
-};
-
-function agendarEnvio(){
-  if(!usuario){
-    status('Toque para entrar e sincronizar', 'desconectado');
-    return;
-  }
-  status('Salvando…', 'salvando');
-  clearTimeout(timer);
-  timer = setTimeout(enviar, 700);
-}
-
-function enviar(){
-  if(!usuario || !ref) return;
-  const lote = { ...S.pendentes };
-  const chaves = Object.keys(lote);
-  if(!chaves.length){ atualizarStatusOk(); return; }
-  const dados = {};
-  chaves.forEach(k => { dados[k] = lote[k]; }); // null = item apagado
-  const promessa = setDoc(ref, { dados, atualizadoEm: serverTimestamp() }, { merge: true });
-  // O Firestore guarda a gravação na fila local; pode limpar as pendências
-  chaves.forEach(k => { if(S.pendentes[k] === lote[k]) delete S.pendentes[k]; });
-  gravarListaPendentes();
-  if(!navigator.onLine) status('Offline, envia ao reconectar', 'offline');
-  promessa.then(atualizarStatusOk).catch(erro);
-}
-
-function atualizarStatusOk(){
-  if(!usuario) return;
-  if(Object.keys(S.pendentes).length) return;
-  if(!navigator.onLine) status('Offline, envia ao reconectar', 'offline');
-  else status('Sincronizado', 'ok');
-}
-
-function erro(e){
-  console.error(e);
-  if(e && e.code === 'permission-denied') status('Sem permissão no banco', 'erro');
-  else status('Erro ao sincronizar', 'erro');
-}
-
-function aplicarRemoto(dados, chaves){
-  // Na primeira sincronização deste aparelho, guarda uma cópia dos dados locais
-  const flag = '__sync_iniciado_' + S.app + '_' + usuario.uid;
-  if(!localStorage.getItem(flag)){
-    const copia = {};
-    chaves.forEach(k => { const v = localStorage.getItem(k); if(v !== null) copia[k] = v; });
-    if(Object.keys(copia).length){
-      S.setItemOriginal.call(localStorage, '__sync_backup_' + S.app, JSON.stringify({ em: new Date().toISOString(), dados: copia }));
-    }
-  }
-  S.aplicandoRemoto = true;
-  chaves.forEach(k => {
-    if(dados[k] === null) localStorage.removeItem(k);
-    else localStorage.setItem(k, dados[k]);
-  });
-  S.aplicandoRemoto = false;
-
-  // Só recarrega sozinho se ninguém está mexendo no app; senão, avisa
-  if(primeiraLeitura || !usuarioInteragiu){
-    location.reload();
-  }else{
-    banner.classList.add('show');
-  }
-}
-
-function iniciarEscuta(){
-  ref = doc(db, 'users', usuario.uid, 'apps', S.app);
-  primeiraLeitura = true;
-  status('Sincronizando…', 'salvando');
-  pararEscuta = onSnapshot(ref, snap => {
-    if(snap.metadata.hasPendingWrites) return;
-    if(snap.metadata.fromCache && primeiraLeitura && !snap.exists()) return; // espera o servidor
-
-    const dados = snap.exists() ? (snap.data().dados || {}) : {};
-    const mudou = [];
-    S.keys.forEach(k => {
-      if(k in S.pendentes) return;
-      const local = localStorage.getItem(k);
-      if(dados[k] === undefined){
-        if(local !== null) S.pendentes[k] = local; // existe só aqui: sobe
-      }else if(dados[k] !== local){
-        mudou.push(k);
-      }
-    });
-
-    if(mudou.length) aplicarRemoto(dados, mudou);
-    S.setItemOriginal.call(localStorage, '__sync_iniciado_' + S.app + '_' + usuario.uid, '1');
-
-    if(Object.keys(S.pendentes).length){
-      gravarListaPendentes();
-      agendarEnvio();
-    }else{
-      atualizarStatusOk();
-    }
-    primeiraLeitura = false;
-  }, erro);
-}
-
-if(auth){
-  onAuthStateChanged(auth, user => {
-    if(pararEscuta){ pararEscuta(); pararEscuta = null; }
-    usuario = user;
-    if(user){
-      iniciarEscuta();
-    }else{
-      ref = null;
-      status('Toque para entrar e sincronizar', 'desconectado');
-    }
-  });
-}
-
-pill.addEventListener('click', async () => {
-  if(!auth) return;
-  if(!usuario){
-    try{
-      status('Entrando…', 'salvando');
-      await signInWithPopup(auth, new GoogleAuthProvider());
-    }catch(e){
-      console.error(e);
-      if(e && (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request')){
-        status('Toque para entrar e sincronizar', 'desconectado');
-      }else if(e && e.code === 'auth/unauthorized-domain'){
-        status('Domínio não autorizado no Firebase', 'erro');
-      }else{
-        status('Falha ao entrar, toque para tentar', 'erro');
-      }
-    }
-    return;
-  }
-  if(confirm('Sincronizando com ' + (usuario.email || 'sua conta Google') + '.\n\nDeseja sair? Os dados continuam salvos neste aparelho.')){
-    await signOut(auth);
-  }
-});
-
-document.getElementById('sync-banner-btn').addEventListener('click', () => location.reload());
-window.addEventListener('online', () => { if(usuario){ if(Object.keys(S.pendentes).length) agendarEnvio(); else atualizarStatusOk(); } });
-window.addEventListener('offline', () => { if(usuario) status('Offline, envia ao reconectar', 'offline'); });
 </script>
 
 </body>
