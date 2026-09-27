@@ -1251,18 +1251,48 @@ function alternarNotificacaoFixaPonto() {
 // o navegador substitui o conteúdo da notificação existente em vez de criar uma nova a
 // cada vez — por isso ela funciona como um "contador" que fica na tela bloqueada e só
 // troca o texto, sem vibrar/alertar de novo a cada atualização.
-let notificacaoFixaAtual = null;
+//
+// IMPORTANTE: no Chrome para Android (e outros navegadores mobile), "new Notification(...)"
+// não funciona — ele exige que a notificação seja exibida através de um Service Worker
+// (ServiceWorkerRegistration.showNotification). Por isso essa função tenta primeiro pelo
+// Service Worker registrado (sw.js) e só usa "new Notification" como fallback (funciona
+// no Chrome/Edge/Firefox de computador).
+let swRegistrationPromise = null;
+if ('serviceWorker' in navigator) {
+  swRegistrationPromise = navigator.serviceWorker.register('sw.js').catch(() => null);
+}
 
 function atualizarNotificacaoFixaPonto(elapsedTexto, valorTexto, categoriaTexto) {
   const ligada = localStorage.getItem(PONTO_NOTIFICAR_FIXA_KEY) === '1';
   if (!ligada) return;
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+  const linhas = [elapsedTexto || ''];
+  if (valorTexto) linhas[0] += ' · ' + valorTexto;
+  if (categoriaTexto) linhas.push(categoriaTexto);
+  const corpo = linhas.join('\n');
+
+  if (swRegistrationPromise) {
+    swRegistrationPromise.then(reg => {
+      if (!reg) { atualizarNotificacaoFixaPontoFallback(corpo); return; }
+      reg.showNotification('⏱️ Turno em andamento', {
+        body: corpo,
+        tag: PONTO_NOTIFICACAO_FIXA_TAG,
+        renotify: false,
+        silent: true
+      }).then(() => { notificacaoFixaAtiva = true; }).catch(() => {
+        atualizarNotificacaoFixaPontoFallback(corpo);
+      });
+    });
+  } else {
+    atualizarNotificacaoFixaPontoFallback(corpo);
+  }
+}
+
+function atualizarNotificacaoFixaPontoFallback(corpo) {
   try {
-    const linhas = [elapsedTexto || ''];
-    if (valorTexto) linhas[0] += ' · ' + valorTexto;
-    if (categoriaTexto) linhas.push(categoriaTexto);
-    notificacaoFixaAtual = new Notification('⏱️ Turno em andamento', {
-      body: linhas.join('\n'),
+    new Notification('⏱️ Turno em andamento', {
+      body: corpo,
       tag: PONTO_NOTIFICACAO_FIXA_TAG,
       renotify: false,
       silent: true
@@ -1273,9 +1303,13 @@ function atualizarNotificacaoFixaPonto(elapsedTexto, valorTexto, categoriaTexto)
 
 function fecharNotificacaoFixaPonto() {
   notificacaoFixaAtiva = false;
-  if (notificacaoFixaAtual) {
-    try { notificacaoFixaAtual.close(); } catch (e) {}
-    notificacaoFixaAtual = null;
+  if (swRegistrationPromise) {
+    swRegistrationPromise.then(reg => {
+      if (!reg) return;
+      reg.getNotifications({ tag: PONTO_NOTIFICACAO_FIXA_TAG }).then(lista => {
+        lista.forEach(n => n.close());
+      }).catch(() => {});
+    });
   }
 }
 
