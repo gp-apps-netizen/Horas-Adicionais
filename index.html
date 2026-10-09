@@ -393,26 +393,38 @@
         <input type="text" id="turno1NomeInput">
       </div>
       <div class="field">
-        <label>Horário de início típico</label>
+        <label>Horário de início</label>
         <input type="time" id="turno1InicioInput">
+      </div>
+      <div class="field">
+        <label>HE ao entrar antes do início (Seg-Sex) — %</label>
+        <input type="number" id="turno1AntecipadaInput" min="0" step="0.5" inputmode="decimal">
       </div>
       <div class="field">
         <label>Nome do 2º Turno</label>
         <input type="text" id="turno2NomeInput">
       </div>
       <div class="field">
-        <label>Horário de início típico</label>
+        <label>Horário de início</label>
         <input type="time" id="turno2InicioInput">
+      </div>
+      <div class="field">
+        <label>HE ao entrar antes do início (Seg-Sex) — %</label>
+        <input type="number" id="turno2AntecipadaInput" min="0" step="0.5" inputmode="decimal">
       </div>
       <div class="field">
         <label>Nome do 3º Turno</label>
         <input type="text" id="turno3NomeInput">
       </div>
       <div class="field">
-        <label>Horário de início típico</label>
+        <label>Horário de início</label>
         <input type="time" id="turno3InicioInput">
       </div>
-      <div class="hint">O horário de início típico é usado só para avisar se você selecionou o turno errado ao iniciar o ponto. Todos os turnos usam os mesmos horários de hora extra, configurados abaixo em "Horários do Ponto".</div>
+      <div class="field">
+        <label>HE ao entrar antes do início (Seg-Sex) — %</label>
+        <input type="number" id="turno3AntecipadaInput" min="0" step="0.5" inputmode="decimal">
+      </div>
+      <div class="hint">O horário de início serve para avisar se você selecionou o turno errado e para a regra de entrada antecipada: de segunda a sexta, o tempo entre a sua entrada e o horário de início do turno é contado como hora extra com o percentual informado (0 = desativado). Fora isso, todos os turnos usam os mesmos horários de hora extra, configurados abaixo em "Horários do Ponto".</div>
     </div>
 
     <div class="card">
@@ -602,9 +614,9 @@ const defaultConfig = {
     ]
   },
   turnos: {
-    turno1: { nome: '1º Turno', inicioTipico: '06:00' },
-    turno2: { nome: '2º Turno', inicioTipico: '14:00' },
-    turno3: { nome: '3º Turno', inicioTipico: '22:00' }
+    turno1: { nome: '1º Turno', inicioTipico: '06:00', heAntecipadaPct: 0 },
+    turno2: { nome: '2º Turno', inicioTipico: '15:26', heAntecipadaPct: 75 },
+    turno3: { nome: '3º Turno', inicioTipico: '22:00', heAntecipadaPct: 0 }
   }
 };
 
@@ -639,6 +651,11 @@ function loadConfig() {
       Object.keys(defaultConfig.turnos).forEach(t => {
         if (parsed.turnos[t] && !parsed.turnos[t].inicioTipico) {
           parsed.turnos[t].inicioTipico = defaultConfig.turnos[t].inicioTipico;
+        }
+        if (parsed.turnos[t] && typeof parsed.turnos[t].heAntecipadaPct !== 'number') {
+          // nova regra: entrada antes do início do turno (seg-sex) vira hora extra
+          parsed.turnos[t].heAntecipadaPct = defaultConfig.turnos[t].heAntecipadaPct;
+          if (t === 'turno2') parsed.turnos[t].inicioTipico = defaultConfig.turnos.turno2.inicioTipico;
         }
       });
       if (!parsed.noturnoInicio) parsed.noturnoInicio = defaultConfig.noturnoInicio;
@@ -694,15 +711,18 @@ function salvarConfig(showToast) {
   config.turnos = {
     turno1: {
       nome: document.getElementById('turno1NomeInput').value || defaultConfig.turnos.turno1.nome,
-      inicioTipico: document.getElementById('turno1InicioInput').value || defaultConfig.turnos.turno1.inicioTipico
+      inicioTipico: document.getElementById('turno1InicioInput').value || defaultConfig.turnos.turno1.inicioTipico,
+      heAntecipadaPct: parseFloat(document.getElementById('turno1AntecipadaInput').value) || 0
     },
     turno2: {
       nome: document.getElementById('turno2NomeInput').value || defaultConfig.turnos.turno2.nome,
-      inicioTipico: document.getElementById('turno2InicioInput').value || defaultConfig.turnos.turno2.inicioTipico
+      inicioTipico: document.getElementById('turno2InicioInput').value || defaultConfig.turnos.turno2.inicioTipico,
+      heAntecipadaPct: parseFloat(document.getElementById('turno2AntecipadaInput').value) || 0
     },
     turno3: {
       nome: document.getElementById('turno3NomeInput').value || defaultConfig.turnos.turno3.nome,
-      inicioTipico: document.getElementById('turno3InicioInput').value || defaultConfig.turnos.turno3.inicioTipico
+      inicioTipico: document.getElementById('turno3InicioInput').value || defaultConfig.turnos.turno3.inicioTipico,
+      heAntecipadaPct: parseFloat(document.getElementById('turno3AntecipadaInput').value) || 0
     }
   };
 
@@ -953,6 +973,29 @@ function turnoAtivoId() {
   return (select && select.value) || 'turno1';
 }
 
+// Regra de entrada antecipada: de seg a sex, minutos entre a entrada e o horário
+// de início do turno (no dia da entrada) viram hora extra com o % do turno.
+function regraAntecipada(turnoId, inicioMs) {
+  const turnos = config.turnos || defaultConfig.turnos;
+  const t = turnos[turnoId];
+  if (!t || !t.inicioTipico || !(t.heAntecipadaPct > 0)) return null;
+  const entrada = new Date(inicioMs);
+  if (getTipoDia(entrada, false) !== 'semana') return null;
+  const [h, m] = t.inicioTipico.split(':').map(Number);
+  const limite = new Date(entrada);
+  limite.setHours(h, m, 0, 0);
+  if (limite.getTime() <= inicioMs) return null;
+  return { limiteMs: limite.getTime(), pct: t.heAntecipadaPct };
+}
+
+function classificarMinutoTurno(tipoDia, minutoDoDia, cursorMs, antecipada) {
+  const c = classificarMinuto(tipoDia, minutoDoDia);
+  if (antecipada && c.cat === 'normal' && tipoDia === 'semana' && cursorMs < antecipada.limiteMs) {
+    return { cat: 'he', pct: antecipada.pct };
+  }
+  return c;
+}
+
 function classificarMinuto(tipoDia, minutoDoDia) {
   const horarios = config.horariosPonto || defaultConfig.horariosPonto;
   const janelas = (horarios && horarios[tipoDia]) || [];
@@ -1017,7 +1060,8 @@ function fmtHoraCurta(d) {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
-function segmentosDoTurno(inicioMs, fimMs, forcarFeriado) {
+function segmentosDoTurno(inicioMs, fimMs, forcarFeriado, turnoId) {
+  const antecipada = forcarFeriado ? null : regraAntecipada(turnoId, inicioMs);
   const totalMinutos = Math.round((fimMs - inicioMs) / 60000);
   const segPrincipal = [];
   const segNoturno = [];
@@ -1039,7 +1083,7 @@ function segmentosDoTurno(inicioMs, fimMs, forcarFeriado) {
       if (chaveAtual !== null) { segPrincipal.push({ chave: chaveAtual, inicio: inicioAtual, fim: new Date(cursor) }); chaveAtual = null; }
       if (noturnoAberto) { segNoturno.push({ inicio: inicioNoturnoAtual, fim: new Date(cursor) }); noturnoAberto = false; }
     } else {
-      const c = classificarMinuto(tipoDia, minutoDoDia);
+      const c = classificarMinutoTurno(tipoDia, minutoDoDia, cursor.getTime(), antecipada);
       const chave = c.cat === 'normal' ? 'normal' : `he${c.pct}`;
       if (chave !== chaveAtual) {
         if (chaveAtual !== null) segPrincipal.push({ chave: chaveAtual, inicio: inicioAtual, fim: new Date(cursor) });
@@ -1065,7 +1109,7 @@ function horariosDaLinha(l, r) {
   if (!r.pontoEntrada || !r.pontoSaida) return '';
   const inicioMs = new Date(r.pontoEntrada).getTime();
   const fimMs = new Date(r.pontoSaida).getTime();
-  const { segPrincipal, segNoturno } = segmentosDoTurno(inicioMs, fimMs, false);
+  const { segPrincipal, segNoturno } = segmentosDoTurno(inicioMs, fimMs, !!r.feriado, r.turno || 'turno1');
 
   let ranges = [];
   if (l.tipo === 'normal') {
@@ -1082,7 +1126,8 @@ function horariosDaLinha(l, r) {
   return ranges.map(s => `${fmtHoraCurta(s.inicio)}–${fmtHoraCurta(s.fim)}`).join(', ');
 }
 
-function classificarPeriodo(inicio, fim, forcarFeriado) {
+function classificarPeriodo(inicio, fim, forcarFeriado, turnoId) {
+  const antecipada = forcarFeriado ? null : regraAntecipada(turnoId || turnoAtivoId(), inicio);
   const totalMinutos = Math.round((fim - inicio) / 60000);
   const buckets = {};
   let minutosNoturno = 0;
@@ -1103,7 +1148,7 @@ function classificarPeriodo(inicio, fim, forcarFeriado) {
       continue;
     }
 
-    const c = classificarMinuto(tipoDia, minutoDoDia);
+    const c = classificarMinutoTurno(tipoDia, minutoDoDia, cursor.getTime(), antecipada);
     const chave = c.cat === 'normal' ? 'normal' : `he${c.pct}`;
     buckets[chave] = (buckets[chave] || 0) + 1;
 
@@ -2202,10 +2247,13 @@ function initSettingsFields() {
   const turnos = config.turnos || defaultConfig.turnos;
   document.getElementById('turno1NomeInput').value = turnos.turno1.nome || '';
   document.getElementById('turno1InicioInput').value = turnos.turno1.inicioTipico || '';
+  document.getElementById('turno1AntecipadaInput').value = turnos.turno1.heAntecipadaPct || 0;
   document.getElementById('turno2NomeInput').value = turnos.turno2.nome || '';
   document.getElementById('turno2InicioInput').value = turnos.turno2.inicioTipico || '';
+  document.getElementById('turno2AntecipadaInput').value = turnos.turno2.heAntecipadaPct || 0;
   document.getElementById('turno3NomeInput').value = turnos.turno3.nome || '';
   document.getElementById('turno3InicioInput').value = turnos.turno3.inicioTipico || '';
+  document.getElementById('turno3AntecipadaInput').value = turnos.turno3.heAntecipadaPct || 0;
 
   horariosDraft = JSON.parse(JSON.stringify(config.horariosPonto || defaultConfig.horariosPonto));
   renderHorariosPonto();
