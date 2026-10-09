@@ -1231,12 +1231,18 @@ function recalcularPonto(autoSalvar) {
     aviso = `\n\nAtenção: ${detalhes} não têm faixa configurada em Configurações e não foram preenchidas.`;
   }
   const avisoIntervalo = minutosIntervalo > 0 ? `\n\nDescontado ${fmtHM(minutosIntervalo / 60)} de intervalo.` : '';
+  const regraAnt = forcarFeriado ? null : regraAntecipada(turnoAtivoId(), inicio);
+  const minAnt = regraAnt ? Math.max(0, Math.round((Math.min(regraAnt.limiteMs, fim) - inicio) / 60000)) : 0;
+  const turnoAtual = (config.turnos || defaultConfig.turnos)[turnoAtivoId()] || {};
+  const avisoAntecipada = minAnt > 0
+    ? `\n\nEntrada antes das ${turnoAtual.inicioTipico}: ${fmtHM(minAnt / 60)} como HE ${regraAnt.pct}%.`
+    : `\n\nTurno usado: ${turnoAtual.nome || turnoAtivoId()}.`;
 
   if (autoSalvar) {
     salvarRegistro();
-    alert(`Turno finalizado: ${fmtHM(totalMinutos / 60)}.${avisoIntervalo}${aviso}\n\nJá salvo no histórico ✓`);
+    alert(`Turno finalizado: ${fmtHM(totalMinutos / 60)}.${avisoIntervalo}${avisoAntecipada}${aviso}\n\nJá salvo no histórico ✓`);
   } else {
-    alert(`${fmtHM(totalMinutos / 60)} classificadas automaticamente.${avisoIntervalo}${aviso}\n\nConfira o detalhamento abaixo.`);
+    alert(`${fmtHM(totalMinutos / 60)} classificadas automaticamente.${avisoIntervalo}${avisoAntecipada}${aviso}\n\nConfira o detalhamento abaixo.`);
   }
 }
 
@@ -1937,12 +1943,32 @@ function removerDsrCiclo(chave) {
 }
 
 function recalcularCiclo(chave) {
-  if (!confirm('Recalcular todos os lançamentos deste ciclo com os valores atuais de Configurações (salário, percentuais, etc.)?\n\nAs horas de cada dia são mantidas — só os valores em R$ são atualizados. Periculosidade e DSR já aplicados precisam ser recalculados separadamente pelos próprios botões.')) return;
+  if (!confirm('Recalcular todos os lançamentos deste ciclo com as Configurações atuais?\n\nDias registrados pelo Ponto (com entrada e saída) têm as horas reclassificadas com as regras atuais (horários, turnos, entrada antecipada). Dias lançados à mão mantêm as horas — só os valores em R$ são atualizados. Periculosidade e DSR já aplicados precisam ser recalculados separadamente pelos próprios botões.')) return;
 
   let registros = carregarRegistros();
+  let reclassificados = 0;
   registros.forEach(r => {
     if (r.ciclo !== chave) return;
     if (r.periculosidadeCiclo || r.dsrCiclo) return;
+
+    if (r.pontoEntrada && r.pontoSaida) {
+      const ini = new Date(r.pontoEntrada).getTime();
+      const fim = new Date(r.pontoSaida).getTime();
+      const res = classificarPeriodo(ini, fim, !!r.feriado, r.turno || 'turno1');
+      if (res.totalMinutos > 0) {
+        const fator = config.noturnoHoraReduzida ? (60 / 52.5) : 1;
+        const novas = [{ nome: 'Salário horista', horas: (res.buckets['normal'] || 0) / 60, valor: 0, tipo: 'normal' }];
+        const horasNot = (res.minutosNoturno / 60) * fator;
+        if (horasNot > 0) novas.push({ nome: 'Adicional noturno', horas: horasNot, valor: 0, tipo: 'noturno' });
+        (config.tiers || []).forEach(t => {
+          const min = res.buckets[`he${t.pct}`] || 0;
+          if (min > 0) novas.push({ nome: t.nome, horas: min / 60, valor: 0, tipo: 'he' });
+        });
+        r.linhas = novas;
+        r.horasExtrasTotal = novas.filter(l => l.tipo === 'he').reduce((s2, l) => s2 + l.horas, 0);
+        reclassificados++;
+      }
+    }
 
     let totalRegistro = 0;
     r.linhas.forEach(l => {
@@ -1962,7 +1988,7 @@ function recalcularCiclo(chave) {
 
   localStorage.setItem(REGISTROS_KEY, JSON.stringify(registros));
   renderHistorico();
-  alert('Lançamentos deste ciclo recalculados com os valores atuais.');
+  alert(`Lançamentos deste ciclo recalculados com os valores atuais.${reclassificados ? `\n\n${reclassificados} dia(s) do Ponto tiveram as horas reclassificadas.` : ''}`);
 }
 
 function removerPericulosidadeCiclo(chave) {
