@@ -394,8 +394,9 @@
       </div>
       <div class="checkbox-row">
         <input type="checkbox" id="pontoFeriado">
-        <label for="pontoFeriado">Considerar feriado (aplica a regra de domingo)</label>
+        <label for="pontoFeriado">Forçar regra de feriado no turno inteiro</label>
       </div>
+      <div class="hint hint-fixa" id="avisoFeriadoCadastrado" style="display:none; color:#ffb74d; font-size:12px; margin:-2px 0 8px;"></div>
       <div class="checkbox-row">
         <input type="checkbox" id="pontoNotificar" onchange="alternarNotificacaoPonto()">
         <label for="pontoNotificar">🔔 Avisar quando começar/mudar hora extra</label>
@@ -660,7 +661,7 @@
         <button class="btn-secondary" style="width:auto; padding:10px 16px; margin-top:0;" onclick="adicionarFeriado()">+ Adicionar</button>
       </div>
       <div id="listaFeriados" style="margin-top:10px;"></div>
-      <div class="hint">Usados para contar automaticamente quantos feriados caem em cada ciclo (16 a 15) ao aplicar o DSR — conta o feriado independente de você ter trabalhado nele ou não.</div>
+      <div class="hint">As horas trabalhadas nesses dias usam automaticamente a regra de "Feriado" dos Horários do Ponto (das 00:00 às 23:59 do dia). Também entram na contagem de feriados do DSR de cada ciclo.</div>
     </div>
 
     <div class="card">
@@ -1333,8 +1334,20 @@ let pontoInterval = null;
 // Semana (seg-sex): 05:01-01:19 normal · 01:20-05:00 HE162,5%
 // Sábado:           05:01-22:00 HE75% · 22:01-05:00 HE162,5%
 // Domingo/Feriado:  05:01-22:00 HE100% · 22:01-05:00 HE200%
+function dataChave(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+// Feriados cadastrados em Configurações → Feriados: o minuto que cai num desses
+// dias usa a regra de "Feriado" (de 00:00 a 23:59 daquele dia).
+function ehFeriadoCadastrado(date) {
+  const lista = config.feriados || [];
+  return lista.length > 0 && lista.includes(dataChave(date));
+}
+
 function getTipoDia(date, forcarFeriado) {
   if (forcarFeriado) return 'feriado';
+  if (ehFeriadoCadastrado(date)) return 'feriado';
   const dia = date.getDay(); // 0=domingo ... 6=sábado
   const minutoDoDia = date.getHours() * 60 + date.getMinutes();
 
@@ -1416,6 +1429,26 @@ function classificarMinuto(tipoDia, minutoDoDia) {
 function paraDatetimeLocal(date) {
   const pad = n => String(n).padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function atualizarAvisoFeriado() {
+  const el = document.getElementById('avisoFeriadoCadastrado');
+  if (!el) return;
+  const entradaVal = document.getElementById('pontoEntradaInput').value;
+  const datas = [new Date()];
+  if (entradaVal) datas.unshift(new Date(entradaVal));
+  const vistos = {};
+  const fer = datas.filter(d => ehFeriadoCadastrado(d)).map(d => dataChave(d)).filter(k => !vistos[k] && (vistos[k] = true));
+  const amanha = new Date(); amanha.setDate(amanha.getDate() + 1);
+  if (fer.length) {
+    el.textContent = `📅 Feriado cadastrado: ${fer.map(k => formatarData(k).slice(0, 5)).join(', ')} — a regra de feriado já é aplicada automaticamente nesse dia.`;
+    el.style.display = '';
+  } else if (ehFeriadoCadastrado(amanha)) {
+    el.textContent = `📅 Amanhã (${formatarData(dataChave(amanha)).slice(0, 5)}) é feriado — a partir da meia-noite conta como feriado.`;
+    el.style.display = '';
+  } else {
+    el.style.display = 'none';
+  }
 }
 
 function iniciarPonto() {
@@ -1918,6 +1951,7 @@ function checarMudancaCategoria(forcarFeriado) {
 }
 
 function pontoEntradaAlterada() {
+  atualizarAvisoFeriado();
   if (localStorage.getItem(PONTO_KEY)) atualizarUIPonto();
   verificarTurnoCompativel();
 }
@@ -2241,7 +2275,7 @@ function infoPainelReal(dados, inicioMs) {
   return {
     previa: false,
     inicioMs,
-    sub: `${turnoNome ? turnoNome + ' · ' : ''}entrada ${fmtHoraCurta(ini)} (${dias[ini.getDay()]} ${String(ini.getDate()).padStart(2, '0')}/${String(ini.getMonth() + 1).padStart(2, '0')})${feriado ? ' · feriado' : ''}`,
+    sub: `${turnoNome ? turnoNome + ' · ' : ''}entrada ${fmtHoraCurta(ini)} (${dias[ini.getDay()]} ${String(ini.getDate()).padStart(2, '0')}/${String(ini.getMonth() + 1).padStart(2, '0')})${feriado || ehFeriadoCadastrado(ini) || ehFeriadoCadastrado(new Date()) ? ' · 📅 feriado' : ''}`,
     agora: categoriaAgora(feriado),
     valorTxt: document.getElementById('totalGeral').textContent,
     prox: proximaMudancaCategoria(feriado),
@@ -2762,12 +2796,14 @@ function adicionarFeriado() {
   }
   input.value = '';
   renderListaFeriados();
+  atualizarAvisoFeriado();
 }
 
 function removerFeriado(dataStr) {
   config.feriados = (config.feriados || []).filter(d => d !== dataStr);
   salvarConfigSilent();
   renderListaFeriados();
+  atualizarAvisoFeriado();
 }
 
 function contarDiasCiclo(chave) {
@@ -3705,6 +3741,8 @@ aplicarAparenciaPonto();
 document.getElementById('pontoNotificar').checked = localStorage.getItem(PONTO_NOTIFICAR_KEY) === '1';
 document.getElementById('pontoNotificarFixa').checked = localStorage.getItem(PONTO_NOTIFICAR_FIXA_KEY) === '1';
 atualizarUIPonto();
+atualizarAvisoFeriado();
+setInterval(atualizarAvisoFeriado, 60000);
 if (!document.getElementById('dataRegistro').value) {
   document.getElementById('dataRegistro').valueAsDate = new Date();
 }
