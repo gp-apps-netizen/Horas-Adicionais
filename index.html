@@ -176,6 +176,148 @@
   .total-box .label { font-size: 12px; color: #8fd4a8; text-transform: uppercase; letter-spacing: 0.5px; }
   .total-box .value { font-size: 28px; font-weight: 700; color: #a8f0c0; margin-top: 4px; }
   .hidden { display: none !important; }
+  body.painel-aberto { overflow: hidden; }
+  .painel-turno {
+    position: fixed; inset: 0; z-index: 800; overflow-y: auto;
+    background: linear-gradient(180deg, #0a1422 0%, #10233a 100%);
+    padding: 22px 18px 100px; display: flex; flex-direction: column;
+  }
+  .painel-interno { width: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; flex: 1; }
+  .painel-topo { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .painel-titulo { font-size: 12px; color: #7fa8cc; text-transform: uppercase; letter-spacing: .7px; }
+  .painel-sub { font-size: 15px; color: #e8edf4; margin-top: 4px; }
+  .painel-modo { font-size: 11px; padding: 5px 10px; border-radius: 999px; background: #1a3550; color: #ffb74d; white-space: nowrap; }
+  .painel-relogio { font-size: 78px; font-weight: 700; color: #4fc3f7; text-align: center; margin-top: 28px; font-variant-numeric: tabular-nums; line-height: 1; }
+  .painel-relogio small { font-size: 30px; color: #2f87b5; font-weight: 600; }
+  .painel-agora-wrap { text-align: center; margin-top: 16px; }
+  .painel-agora { display: inline-block; padding: 8px 16px; border-radius: 999px; font-size: 14px; font-weight: 600; background: #1a3550; color: #8fd4a8; }
+  .painel-agora.he { background: #3d2410; color: #ffb74d; }
+  .painel-agora.off { background: #2e1c24; color: #f28b9a; }
+  .painel-valor { font-size: 42px; font-weight: 700; color: #a8f0c0; text-align: center; margin-top: 18px; font-variant-numeric: tabular-nums; }
+  .painel-prox { font-size: 12px; color: #7fa8cc; text-align: center; margin-top: 6px; }
+  .painel-detalhes { margin-top: 22px; background: #14263b; border: 1px solid #1e3450; border-radius: 14px; padding: 4px 14px; }
+  .painel-linha { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid #1e3450; font-size: 14px; color: #c9d6e3; }
+  .painel-linha:last-child { border-bottom: none; }
+  .painel-linha .h { display: block; color: #7fa8cc; font-size: 12px; margin-top: 2px; }
+  .painel-linha .v { font-weight: 600; color: #e8edf4; white-space: nowrap; }
+  .painel-linha.total { color: #8fd4a8; font-weight: 600; }
+  .painel-linha.total .v { color: #8fd4a8; }
+  .painel-vazio { padding: 14px 0; text-align: center; font-size: 13px; color: #5f7d99; }
+  .painel-acoes { margin-top: auto; padding-top: 24px; display: flex; flex-direction: column; gap: 10px; }
+  .painel-acoes .linha { display: flex; gap: 10px; }
+  .btn-finalizar { background: #c62828; color: #fff; border: none; border-radius: 12px; padding: 17px; font-size: 17px; font-weight: 700; width: 100%; cursor: pointer; }
+  /* ---- Modelos do painel (variáveis) ---- */
+  .painel-turno, .mini-painel {
+    --pbg: linear-gradient(180deg, #0a1422 0%, #10233a 100%);
+    --pd: #4fc3f7; --ptxt: #e8edf4; --psub: #7fa8cc; --pcard: #14263b; --pborda: #1e3450; --pvalor: #a8f0c0;
+    --rel: 78px;
+  }
+  .tema-digital { --pbg: #000; --pd: #39ff14; --ptxt: #b8ffb0; --psub: #3fae35; --pcard: #041004; --pborda: #0f3a0f; --pvalor: #39ff14; }
+  .tema-claro { --pbg: #f3f6fb; --pd: #1565c0; --ptxt: #1b2a3a; --psub: #5a6f86; --pcard: #ffffff; --pborda: #dbe3ee; --pvalor: #2e7d32; }
+  .tema-amoled { --pbg: #000; --pd: #c94a4a; --ptxt: #8a8a8a; --psub: #5a5a5a; --pcard: #050505; --pborda: #1a1a1a; --pvalor: #9a6a6a; }
+  .tema-vibrante { --pbg: linear-gradient(160deg, #e65100 0%, #8e24aa 100%); --pd: #fff; --ptxt: #fff; --psub: #ffe0cc; --pcard: rgba(255,255,255,.14); --pborda: rgba(255,255,255,.22); --pvalor: #fff; }
+  .tema-minimalista { --pbg: #0b0f14; --pd: #e8edf4; --ptxt: #c9d6e3; --psub: #6b7d90; --pcard: #121a24; --pborda: #1c2733; --pvalor: #a8f0c0; }
+  .tema-cartoes { --pbg: linear-gradient(180deg, #101826 0%, #172338 100%); --pd: #ffb74d; --pcard: #1b2a40; --pborda: #26395a; }
+
+  .painel-turno { background: var(--pbg); color: var(--ptxt); }
+  .painel-turno .painel-titulo, .painel-turno .painel-prox, .painel-turno .painel-linha .h { color: var(--psub); }
+  .painel-turno .painel-sub, .painel-turno .painel-linha, .painel-turno .painel-linha .v { color: var(--ptxt); }
+  .painel-turno .painel-relogio { color: var(--pd); font-size: var(--rel); }
+  .painel-turno .painel-relogio small { color: var(--pd); opacity: .6; font-size: calc(var(--rel) * .38); }
+  .painel-turno .painel-valor { color: var(--pvalor); }
+  .painel-turno .painel-detalhes, .painel-turno .painel-modo { background: var(--pcard); border-color: var(--pborda); }
+  .painel-turno .painel-linha { border-color: var(--pborda); }
+  .painel-turno.rel-P { --rel: 58px; }
+  .painel-turno.rel-G { --rel: 102px; }
+  .painel-turno.sem-segundos .painel-relogio small { display: none; }
+  .painel-turno.sem-prox .painel-prox { display: none; }
+  .painel-turno.sem-detalhes .painel-detalhes { display: none; }
+  .painel-turno:not(.com-linha) .painel-timeline { display: none; }
+  .painel-topo-dir { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+  .painel-btn-tema { background: var(--pcard); border: 1px solid var(--pborda); color: var(--ptxt); border-radius: 999px; padding: 5px 10px; font-size: 13px; cursor: pointer; }
+
+  .tema-digital .painel-relogio, .tema-digital .painel-valor { font-family: 'Courier New', ui-monospace, monospace; text-shadow: 0 0 14px rgba(57,255,20,.65); letter-spacing: 2px; }
+  .tema-digital .painel-agora { background: #062306; color: #39ff14; }
+
+  .tema-claro .painel-agora { background: #e3edf8; color: #2e7d32; }
+  .tema-claro .painel-agora.he { background: #fff0e0; color: #e65100; }
+  .tema-claro .painel-agora.off { background: #fde8ec; color: #c62828; }
+  .tema-claro .btn-secondary { background: #fff; color: #1b2a3a; border-color: #cfd9e6; }
+
+  .tema-amoled .painel-agora, .tema-amoled .painel-agora.he, .tema-amoled .painel-agora.off { background: #111; color: #a55; }
+  .tema-amoled .btn-finalizar { background: #4a1212; color: #c99; }
+  .tema-amoled .btn-secondary { background: #000; border-color: #222; color: #777; }
+
+  .tema-vibrante .painel-agora, .tema-vibrante .painel-agora.he, .tema-vibrante .painel-agora.off { background: rgba(0,0,0,.25); color: #fff; }
+  .tema-vibrante .btn-secondary { border-color: rgba(255,255,255,.5); color: #fff; }
+  .tema-vibrante .btn-finalizar { background: #fff; color: #c62828; }
+
+  .tema-minimalista .painel-relogio { margin-top: 14vh; font-weight: 200; font-size: calc(var(--rel) * 1.35); }
+  .tema-minimalista .painel-relogio small { font-weight: 300; }
+  .tema-minimalista .painel-agora { background: transparent; border: 1px solid var(--pborda); }
+  .tema-minimalista .painel-valor { font-size: 26px; font-weight: 500; }
+  .tema-minimalista .painel-detalhes, .tema-minimalista .painel-titulo { display: none; }
+
+  .painel-tiles { display: none; }
+  .tema-cartoes .painel-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
+  .tema-cartoes .painel-valor, .tema-cartoes .painel-detalhes, .tema-cartoes .painel-prox { display: none; }
+  .tema-cartoes .painel-relogio { font-size: calc(var(--rel) * .85); }
+  .painel-tile { background: var(--pcard); border: 1px solid var(--pborda); border-radius: 14px; padding: 12px 14px; }
+  .painel-tile.largo { grid-column: span 2; }
+  .painel-tile .t-rot { font-size: 11px; color: var(--psub); text-transform: uppercase; letter-spacing: .5px; }
+  .painel-tile .t-val { font-size: 22px; font-weight: 700; color: var(--ptxt); margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .painel-tile .t-val.verde { color: var(--pvalor); font-size: 30px; }
+  .painel-tile .t-sub { font-size: 11px; color: var(--psub); margin-top: 2px; }
+
+  .painel-timeline { margin-top: 20px; }
+  .tl-barra { position: relative; height: 20px; border-radius: 10px; background: var(--pcard); border: 1px solid var(--pborda); overflow: hidden; }
+  .tl-seg { position: absolute; top: 0; bottom: 0; }
+  .tl-horas { display: flex; justify-content: space-between; font-size: 11px; color: var(--psub); margin-top: 4px; }
+  .tl-legenda { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 11px; color: var(--psub); margin-top: 6px; }
+  .tl-legenda i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
+
+  /* ---- Configurações: escolha do modelo ---- */
+  .modelos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .modelo-opcao { background: #0f1e30; border: 2px solid #2a4763; border-radius: 12px; padding: 6px; cursor: pointer; text-align: center; color: #c9d6e3; font-size: 12px; }
+  .modelo-opcao.ativo { border-color: #e65100; color: #fff; }
+  .mini-painel { height: 70px; border-radius: 8px; background: var(--pbg); display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 6px; border: 1px solid var(--pborda); }
+  .mini-painel b { color: var(--pd); font-size: 24px; font-variant-numeric: tabular-nums; }
+  .mini-painel span { color: var(--pvalor); font-size: 11px; font-weight: 600; }
+  .mini-painel.tema-digital b { font-family: 'Courier New', monospace; text-shadow: 0 0 8px rgba(57,255,20,.7); }
+  .mini-painel.tema-minimalista b { font-weight: 200; font-size: 28px; }
+  .mini-painel.tema-cartoes { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 6px; }
+  .mini-painel.tema-cartoes b, .mini-painel.tema-cartoes span { background: var(--pcard); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 13px; height: 100%; }
+  .cores-linha { display: flex; flex-wrap: wrap; gap: 10px; }
+  .cor-opcao { width: 34px; height: 34px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; font-size: 11px; color: #fff; }
+  .cor-opcao.ativo { border-color: #fff; box-shadow: 0 0 0 2px #e65100; }
+  .seg-linha { display: flex; gap: 6px; }
+  .seg-linha button { flex: 1; background: #0f1e30; border: 1px solid #2a4763; color: #7fa8cc; border-radius: 8px; padding: 8px; font-size: 13px; cursor: pointer; }
+  .seg-linha button.ativo { background: #e65100; border-color: #e65100; color: #fff; }
+  .opc-rotulo { font-size: 12px; color: #7fa8cc; margin: 14px 0 8px; }
+  /* ---- Imagem de fundo do painel ---- */
+  .painel-fundo, .painel-fundo-veu { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+  .painel-fundo { background-size: cover; background-position: center; }
+  .painel-turno .painel-interno { position: relative; z-index: 1; }
+  .painel-turno:not(.com-fundo) .painel-fundo, .painel-turno:not(.com-fundo) .painel-fundo-veu { display: none; }
+  .com-fundo .painel-detalhes, .com-fundo .painel-tile, .com-fundo .painel-modo, .com-fundo .painel-btn-tema, .com-fundo .tl-barra {
+    background: rgba(8, 16, 28, .55); border-color: rgba(255,255,255,.12); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  }
+  .com-fundo.tema-claro .painel-detalhes, .com-fundo.tema-claro .painel-tile, .com-fundo.tema-claro .painel-modo, .com-fundo.tema-claro .painel-btn-tema, .com-fundo.tema-claro .tl-barra {
+    background: rgba(255,255,255,.72); border-color: rgba(0,0,0,.08);
+  }
+  .com-fundo .painel-relogio, .com-fundo .painel-valor { text-shadow: 0 2px 14px rgba(0,0,0,.55); }
+  .com-fundo.tema-claro .painel-relogio, .com-fundo.tema-claro .painel-valor { text-shadow: 0 1px 10px rgba(255,255,255,.8); }
+  .fundos-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .fundo-opcao { height: 64px; border-radius: 10px; border: 2px solid #2a4763; cursor: pointer; background-size: cover; background-position: center;
+    display: flex; align-items: flex-end; justify-content: center; font-size: 10px; color: #fff; text-shadow: 0 1px 3px #000; padding-bottom: 3px; position: relative; overflow: hidden; }
+  .fundo-opcao.ativo { border-color: #e65100; box-shadow: 0 0 0 2px #e65100; }
+  .fundo-opcao input { display: none; }
+  .faixa-linha { display: flex; align-items: center; gap: 10px; }
+  .faixa-linha input[type=range] { flex: 1; accent-color: #e65100; }
+  .faixa-linha span { min-width: 42px; text-align: right; font-size: 12px; color: #c9d6e3; }
+
+
+
   .content { padding-bottom: 96px; }
   .voz-fab {
     position: fixed; right: 18px; bottom: 22px; z-index: 900;
@@ -282,6 +424,7 @@
         <button class="btn-primary" onclick="iniciarPonto()">▶️ Iniciar turno agora</button>
       </div>
       <div id="pontoBotoesAtivo" class="hidden">
+        <button class="btn-secondary" style="margin-top:0;" onclick="mostrarPainelTurno()">⛶ Abrir painel do turno</button>
         <button class="btn-primary" onclick="finalizarPonto()">⏹ Finalizar turno agora</button>
         <button class="btn-secondary" onclick="cancelarPonto()">Cancelar turno</button>
       </div>
@@ -399,6 +542,32 @@
         </select>
         <div class="hint">Calculada sobre as horas extras (e sobre as horas normais, quando o modo "Normais + extras" estiver em uso). Aplicada por ciclo (16 a 15) através do botão "☣️ Aplicar periculosidade" na aba Histórico → Resumo, sobre o total de lançamentos daquele ciclo.</div>
       </div>
+    </div>
+
+    <div class="card">
+      <h2>🎨 Painel do turno</h2>
+      <div class="opc-rotulo" style="margin-top:4px;">Modelo</div>
+      <div class="modelos-grid" id="modelosPainel"></div>
+      <div class="opc-rotulo">Cor do relógio</div>
+      <div class="cores-linha" id="coresPainel"></div>
+      <div class="opc-rotulo">Tamanho do relógio</div>
+      <div class="seg-linha" id="tamanhoPainel"></div>
+      <div class="opc-rotulo">Imagem de fundo</div>
+      <div class="fundos-grid" id="fundosPainel"></div>
+      <input type="file" id="fundoFotoInput" accept="image/*" style="display:none" onchange="carregarFotoFundo(event)">
+      <div id="fundoAjustes">
+        <div class="opc-rotulo">Escurecer a imagem</div>
+        <div class="faixa-linha"><input type="range" id="fundoEscurecer" min="0" max="90" step="5" oninput="definirOpcaoPainel('escurecer', parseInt(this.value))"><span id="fundoEscurecerVal"></span></div>
+        <div class="opc-rotulo">Desfoque</div>
+        <div class="faixa-linha"><input type="range" id="fundoDesfoque" min="0" max="20" step="1" oninput="definirOpcaoPainel('desfoque', parseInt(this.value))"><span id="fundoDesfoqueVal"></span></div>
+      </div>
+      <div class="opc-rotulo">Mostrar no painel</div>
+      <div class="checkbox-row"><input type="checkbox" id="painelOpcSegundos" onchange="definirOpcaoPainel('segundos', this.checked)"><label for="painelOpcSegundos">Segundos no relógio</label></div>
+      <div class="checkbox-row"><input type="checkbox" id="painelOpcProxima" onchange="definirOpcaoPainel('proxima', this.checked)"><label for="painelOpcProxima">Próxima mudança de categoria</label></div>
+      <div class="checkbox-row"><input type="checkbox" id="painelOpcDetalhes" onchange="definirOpcaoPainel('detalhes', this.checked)"><label for="painelOpcDetalhes">Detalhamento das horas</label></div>
+      <div class="checkbox-row"><input type="checkbox" id="painelOpcLinha" onchange="definirOpcaoPainel('linhaTempo', this.checked)"><label for="painelOpcLinha">Linha do tempo do turno (barra colorida)</label></div>
+      <button class="btn-secondary" onclick="previsualizarPainel()">👁 Ver prévia do painel</button>
+      <div class="hint">No próprio painel, o botão 🎨 troca de modelo na hora.</div>
     </div>
 
     <div class="card">
@@ -541,6 +710,40 @@
     <button class="btn-secondary" onclick="salvarConfig(true)">Salvar configurações</button>
   </div>
 
+</div>
+
+<div id="painelTurno" class="painel-turno hidden">
+  <div class="painel-fundo" id="painelFundo"></div>
+  <div class="painel-fundo-veu" id="painelFundoVeu"></div>
+  <div class="painel-interno">
+    <div class="painel-topo">
+      <div>
+        <div class="painel-titulo">⏱️ Turno em andamento</div>
+        <div class="painel-sub" id="painelSub"></div>
+      </div>
+      <div class="painel-topo-dir">
+        <div class="painel-modo" id="painelModo"></div>
+        <button class="painel-btn-tema" onclick="proximoModeloPainel()" title="Trocar modelo">🎨 <span id="painelNomeModelo"></span></button>
+      </div>
+    </div>
+    <div class="painel-relogio" id="painelRelogio">0:00<small>:00</small></div>
+    <div class="painel-agora-wrap"><span class="painel-agora" id="painelAgora"></span></div>
+    <div class="painel-valor" id="painelValor"></div>
+    <div class="painel-prox" id="painelProx"></div>
+    <div class="painel-tiles" id="painelTiles"></div>
+    <div class="painel-timeline" id="painelTimeline"></div>
+    <div class="painel-detalhes" id="painelDetalhes"></div>
+    <div class="painel-acoes" id="painelAcoesReal">
+      <button class="btn-finalizar" onclick="finalizarPonto()">⏹ Finalizar turno</button>
+      <div class="linha">
+        <button class="btn-secondary" style="flex:1; margin-top:0;" onclick="minimizarPainelTurno()">📋 Ver app</button>
+        <button class="btn-secondary" style="flex:1; margin-top:0; color:#f28b9a;" onclick="cancelarPonto()">Cancelar turno</button>
+      </div>
+    </div>
+    <div class="painel-acoes hidden" id="painelAcoesPrevia">
+      <button class="btn-finalizar" style="background:#e65100;" onclick="fecharPreviaPainel()">✓ Fechar prévia</button>
+    </div>
+  </div>
 </div>
 
 <button id="vozFab" class="voz-fab" onclick="abrirVoz()" aria-label="Registrar por voz">🎤</button>
@@ -1225,6 +1428,7 @@ function iniciarPonto() {
   document.getElementById('pontoEntradaInput').value = paraDatetimeLocal(new Date(inicio));
   document.getElementById('pontoSaidaInput').value = '';
   ultimaCategoriaPonto = null;
+  painelMinimizado = false;
   atualizarUIPonto();
   verificarTurnoCompativel();
 }
@@ -1674,8 +1878,8 @@ function fecharNotificacaoFixaPonto() {
   }
 }
 
-function categoriaAgora(forcarFeriado) {
-  const agora = new Date();
+function categoriaAgora(forcarFeriado, quandoMs) {
+  const agora = quandoMs ? new Date(quandoMs) : new Date();
   const tipoDia = getTipoDia(agora, forcarFeriado);
   const minutoDoDia = agora.getHours() * 60 + agora.getMinutes();
 
@@ -1775,6 +1979,7 @@ function atualizarUIPonto() {
         valorLive ? valorLive.textContent : '',
         categoriaBadge ? categoriaBadge.textContent : ''
       );
+      renderPainelTurno(dados, inicioAtual);
     };
 
     tick();
@@ -1787,7 +1992,387 @@ function atualizarUIPonto() {
     if (selectTurno) selectTurno.disabled = false;
     liberarWakeLockPonto();
     fecharNotificacaoFixaPonto();
+    if (!painelPrevia) { esconderPainelTurno(); painelInicioMs = null; }
   }
+}
+
+// ===================== PAINEL DO TURNO (tela cheia) =====================
+const PAINEL_MODELOS = [
+  { id: 'classico', nome: 'Clássico' },
+  { id: 'digital', nome: 'Digital (LED)' },
+  { id: 'claro', nome: 'Claro (dia)' },
+  { id: 'amoled', nome: 'Noturno (economia)' },
+  { id: 'vibrante', nome: 'Vibrante' },
+  { id: 'minimalista', nome: 'Minimalista' },
+  { id: 'cartoes', nome: 'Cartões' }
+];
+const PAINEL_CORES = [
+  { id: '', nome: 'Padrão', cor: 'conic-gradient(#4fc3f7, #39ff14, #ffb74d, #4fc3f7)' },
+  { id: '#4fc3f7', cor: '#4fc3f7' }, { id: '#66bb6a', cor: '#66bb6a' }, { id: '#ffb74d', cor: '#ffb74d' },
+  { id: '#ff7043', cor: '#ff7043' }, { id: '#ba68c8', cor: '#ba68c8' }, { id: '#f06292', cor: '#f06292' },
+  { id: '#ffee58', cor: '#ffee58' }, { id: '#ffffff', cor: '#ffffff' }
+];
+const PAINEL_PADRAO = { modelo: 'classico', cor: '', tamanho: 'M', segundos: true, proxima: true, detalhes: true, linhaTempo: false, fundo: 'nenhum', escurecer: 45, desfoque: 0 };
+const TL_CORES = ['#ffb74d', '#ff7043', '#ba68c8', '#f06292', '#4dd0e1', '#aed581'];
+
+let painelMinimizado = false;
+let painelRelogioInterval = null;
+let painelInicioMs = null;
+let painelPrevia = false;
+let ultimoInfoPainel = null;
+
+function opcoesPainel() { return Object.assign({}, PAINEL_PADRAO, config.painel || {}); }
+
+// ---------- Imagem de fundo ----------
+const FUNDO_FOTO_KEY = 'horasExtrasApp_painelFundoFoto_v1';
+const PAINEL_FUNDOS = [
+  { id: 'nenhum', nome: 'Nenhuma', css: '' },
+  { id: 'foto', nome: '📷 Sua foto', css: '' },
+  { id: 'estrelas', nome: 'Céu estrelado', css: 'radial-gradient(1.5px 1.5px at 12% 18%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 32% 62%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 72% 28%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 86% 76%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 52% 12%, #cfe 50%, transparent 51%), radial-gradient(1px 1px at 22% 88%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 62% 48%, #ffd 50%, transparent 51%), radial-gradient(1px 1px at 92% 42%, #fff 50%, transparent 51%), radial-gradient(ellipse at 70% 110%, #3a2a6b 0%, transparent 60%), linear-gradient(180deg, #050a1a 0%, #142046 100%)' },
+  { id: 'por-do-sol', nome: 'Pôr do sol', css: 'radial-gradient(circle at 50% 78%, #ffd36b 0%, #ff8a3d 14%, transparent 36%), linear-gradient(180deg, #2b1055 0%, #7b2e7a 38%, #d53369 66%, #f8a13f 100%)' },
+  { id: 'oceano', nome: 'Oceano', css: 'radial-gradient(ellipse at 30% 0%, rgba(79,195,247,.35) 0%, transparent 55%), linear-gradient(170deg, #0f2027 0%, #203a43 50%, #2c5364 100%)' },
+  { id: 'aurora', nome: 'Aurora', css: 'radial-gradient(at 15% 20%, rgba(0,201,167,.65) 0%, transparent 45%), radial-gradient(at 85% 25%, rgba(132,94,194,.7) 0%, transparent 45%), radial-gradient(at 50% 95%, rgba(0,140,255,.45) 0%, transparent 50%), #0b1020' },
+  { id: 'floresta', nome: 'Floresta', css: 'radial-gradient(ellipse at 50% 120%, #2e7d32 0%, transparent 60%), linear-gradient(170deg, #0b2b1f 0%, #14513a 55%, #0a2a1c 100%)' },
+  { id: 'industrial', nome: 'Industrial', css: 'repeating-linear-gradient(45deg, rgba(255,183,77,.10) 0 18px, transparent 18px 36px), linear-gradient(180deg, #1c1f24 0%, #2a2f36 100%)' }
+];
+let fotoFundoCache = null;
+
+function fotoFundo() {
+  if (fotoFundoCache === null) {
+    try { fotoFundoCache = localStorage.getItem(FUNDO_FOTO_KEY) || ''; } catch (e) { fotoFundoCache = ''; }
+  }
+  return fotoFundoCache;
+}
+
+function cssDoFundo(id) {
+  if (id === 'foto') { const f = fotoFundo(); return f ? `url("${f}")` : ''; }
+  const p = PAINEL_FUNDOS.find(x => x.id === id);
+  return p ? p.css : '';
+}
+
+function escolherFundo(id) {
+  if (id === 'foto' && !fotoFundo()) { document.getElementById('fundoFotoInput').click(); return; }
+  definirOpcaoPainel('fundo', id);
+}
+
+function carregarFotoFundo(event) {
+  const file = event.target.files && event.target.files[0];
+  event.target.value = '';
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const tentar = (maxLado, qualidade) => {
+        const escala = Math.min(1, maxLado / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * escala);
+        c.height = Math.round(img.height * escala);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        return c.toDataURL('image/jpeg', qualidade);
+      };
+      const opcoes = [[1280, 0.82], [1000, 0.7], [800, 0.6]];
+      for (const [lado, q] of opcoes) {
+        const url = tentar(lado, q);
+        try {
+          localStorage.setItem(FUNDO_FOTO_KEY, url);
+          fotoFundoCache = url;
+          definirOpcaoPainel('fundo', 'foto');
+          vozToast('🖼️ Imagem de fundo salva');
+          return;
+        } catch (err) { /* sem espaço: tenta menor */ }
+      }
+      alert('Não foi possível salvar essa imagem (sem espaço no armazenamento do app). Tente outra imagem.');
+    };
+    img.onerror = () => alert('Não foi possível abrir essa imagem.');
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function trocarFotoFundo(ev) {
+  if (ev) ev.stopPropagation();
+  document.getElementById('fundoFotoInput').click();
+}
+
+function removerFotoFundo(ev) {
+  if (ev) ev.stopPropagation();
+  if (!confirm('Remover a sua foto de fundo?')) return;
+  try { localStorage.removeItem(FUNDO_FOTO_KEY); } catch (e) {}
+  fotoFundoCache = '';
+  definirOpcaoPainel('fundo', 'nenhum');
+}
+
+function renderOpcoesFundo() {
+  const grid = document.getElementById('fundosPainel');
+  if (!grid) return;
+  const o = opcoesPainel();
+  const foto = fotoFundo();
+  grid.innerHTML = PAINEL_FUNDOS.map(f => {
+    let bg = f.id === 'foto' ? (foto ? `url("${foto}")` : 'linear-gradient(135deg,#1a3550,#0f1e30)') : (f.css || 'linear-gradient(135deg,#0f1e30,#14263b)');
+    const extra = f.id === 'foto' && foto
+      ? `<span style="position:absolute; top:3px; right:4px; display:flex; gap:4px;">
+           <b onclick="trocarFotoFundo(event)" title="Trocar foto" style="background:rgba(0,0,0,.55); border-radius:6px; padding:1px 4px;">🔄</b>
+           <b onclick="removerFotoFundo(event)" title="Remover foto" style="background:rgba(0,0,0,.55); border-radius:6px; padding:1px 4px;">✕</b>
+         </span>` : '';
+    return `<div class="fundo-opcao${o.fundo === f.id ? ' ativo' : ''}" style='background-image:${bg.replace(/'/g, "&#39;")};' onclick="escolherFundo('${f.id}')">${extra}${f.nome}</div>`;
+  }).join('');
+  document.getElementById('fundoAjustes').style.display = o.fundo === 'nenhum' ? 'none' : '';
+  document.getElementById('fundoEscurecer').value = o.escurecer;
+  document.getElementById('fundoEscurecerVal').textContent = o.escurecer + '%';
+  document.getElementById('fundoDesfoque').value = o.desfoque;
+  document.getElementById('fundoDesfoqueVal').textContent = o.desfoque + 'px';
+}
+
+function aplicarFundoPainel(painel, o) {
+  const css = o.fundo && o.fundo !== 'nenhum' ? cssDoFundo(o.fundo) : '';
+  painel.classList.toggle('com-fundo', !!css);
+  const el = document.getElementById('painelFundo');
+  const chave = o.fundo + ':' + css.length;
+  if (el.dataset.chave !== chave) {
+    el.style.backgroundImage = css || 'none';
+    el.dataset.chave = chave;
+  }
+  el.style.filter = o.desfoque > 0 ? `blur(${o.desfoque}px)` : '';
+  el.style.transform = o.desfoque > 0 ? 'scale(1.08)' : '';
+  const claro = o.modelo === 'claro';
+  document.getElementById('painelFundoVeu').style.background =
+    claro ? `rgba(255,255,255,${o.escurecer / 100})` : `rgba(0,0,0,${o.escurecer / 100})`;
+}
+
+function definirOpcaoPainel(chave, valor) {
+  config.painel = Object.assign(opcoesPainel(), { [chave]: valor });
+  salvarConfigSilent();
+  renderOpcoesPainel();
+  if (ultimoInfoPainel && !document.getElementById('painelTurno').classList.contains('hidden')) desenharPainel(ultimoInfoPainel);
+}
+
+function proximoModeloPainel() {
+  const atual = opcoesPainel().modelo;
+  const idx = PAINEL_MODELOS.findIndex(m => m.id === atual);
+  const prox = PAINEL_MODELOS[(idx + 1) % PAINEL_MODELOS.length];
+  definirOpcaoPainel('modelo', prox.id);
+}
+
+function renderOpcoesPainel() {
+  const o = opcoesPainel();
+  const grid = document.getElementById('modelosPainel');
+  if (!grid) return;
+  grid.innerHTML = PAINEL_MODELOS.map(m => `
+    <div class="modelo-opcao${o.modelo === m.id ? ' ativo' : ''}" onclick="definirOpcaoPainel('modelo', '${m.id}')">
+      <div class="mini-painel tema-${m.id}">${m.id === 'cartoes' ? '<b>1:54</b><span>R$ 66</span><span>1h54</span><span>75%</span>' : '<b>1:54</b><span>R$ 66,50</span>'}</div>
+      ${m.nome}
+    </div>`).join('');
+  document.getElementById('coresPainel').innerHTML = PAINEL_CORES.map(c => `
+    <button type="button" class="cor-opcao${o.cor === c.id ? ' ativo' : ''}" style="background:${c.cor};" title="${c.nome || c.id}" onclick="definirOpcaoPainel('cor', '${c.id}')"></button>`).join('');
+  document.getElementById('tamanhoPainel').innerHTML = [['P', 'Pequeno'], ['M', 'Médio'], ['G', 'Grande']].map(([id, nome]) => `
+    <button type="button" class="${o.tamanho === id ? 'ativo' : ''}" onclick="definirOpcaoPainel('tamanho', '${id}')">${nome}</button>`).join('');
+  document.getElementById('painelOpcSegundos').checked = !!o.segundos;
+  document.getElementById('painelOpcProxima').checked = !!o.proxima;
+  document.getElementById('painelOpcDetalhes').checked = !!o.detalhes;
+  document.getElementById('painelOpcLinha').checked = !!o.linhaTempo;
+  renderOpcoesFundo();
+}
+
+function mostrarPainelTurno() {
+  painelMinimizado = false;
+  atualizarUIPonto();
+}
+
+function minimizarPainelTurno() {
+  painelMinimizado = true;
+  esconderPainelTurno();
+  const card = document.getElementById('cardPonto');
+  if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function esconderPainelTurno() {
+  document.getElementById('painelTurno').classList.add('hidden');
+  document.body.classList.remove('painel-aberto');
+  if (painelRelogioInterval) { clearInterval(painelRelogioInterval); painelRelogioInterval = null; }
+}
+
+function atualizarRelogioPainel() {
+  if (!painelInicioMs) return;
+  const seg = Math.max(0, Math.floor((Date.now() - painelInicioMs) / 1000));
+  const h = Math.floor(seg / 3600);
+  const m = Math.floor((seg % 3600) / 60);
+  const ss = seg % 60;
+  document.getElementById('painelRelogio').innerHTML =
+    `${h}:${String(m).padStart(2, '0')}<small>:${String(ss).padStart(2, '0')}</small>`;
+}
+
+function proximaMudancaCategoria(feriado) {
+  const atual = categoriaAgora(feriado);
+  const d = new Date();
+  d.setSeconds(0, 0);
+  for (let i = 0; i < 1440; i++) {
+    d.setMinutes(d.getMinutes() + 1);
+    const c = categoriaAgora(feriado, d.getTime());
+    if (c !== atual) return { hora: fmtHoraCurta(d), cat: c, texto: `Às ${fmtHoraCurta(d)} → ${c}` };
+  }
+  return null;
+}
+
+function corDaChave(chave) {
+  if (chave === 'normal') return contarNormaisAtivo() ? '#5c8fd1' : '#3a4b5e';
+  const pct = parseFloat(chave.replace('he', ''));
+  const ordem = (config.tiers || []).map(t => t.pct).sort((a, b) => a - b);
+  const i = ordem.indexOf(pct);
+  return TL_CORES[(i >= 0 ? i : 0) % TL_CORES.length];
+}
+
+function nomeDaChave(chave) {
+  if (chave === 'normal') return contarNormaisAtivo() ? 'Normal' : 'Normal (não conta)';
+  return 'HE ' + chave.replace('he', '').replace('.', ',') + '%';
+}
+
+function infoPainelReal(dados, inicioMs) {
+  const feriado = document.getElementById('pontoFeriado').checked;
+  const turnos = config.turnos || defaultConfig.turnos;
+  const turnoNome = (turnos[dados.turno] || {}).nome || '';
+  const ini = new Date(inicioMs);
+  const dias = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+  let segmentos = [];
+  try {
+    segmentos = segmentosDoTurno(inicioMs, Date.now(), feriado, dados.turno || 'turno1', decisoesHE).segPrincipal
+      .map(sg => ({ chave: sg.chave, ini: sg.inicio.getTime(), fim: sg.fim.getTime() }));
+  } catch (e) {}
+  return {
+    previa: false,
+    inicioMs,
+    sub: `${turnoNome ? turnoNome + ' · ' : ''}entrada ${fmtHoraCurta(ini)} (${dias[ini.getDay()]} ${String(ini.getDate()).padStart(2, '0')}/${String(ini.getMonth() + 1).padStart(2, '0')})${feriado ? ' · feriado' : ''}`,
+    agora: categoriaAgora(feriado),
+    valorTxt: document.getElementById('totalGeral').textContent,
+    prox: proximaMudancaCategoria(feriado),
+    linhas: ((ultimoCalculo && ultimoCalculo.linhas) || []).slice(),
+    segmentos,
+    fimMs: Date.now()
+  };
+}
+
+function infoPainelPrevia() {
+  const agora = Date.now();
+  const inicioMs = agora - (2 * 60 + 34) * 60000;
+  const sh = config.salarioHora || 20;
+  const tiers = (config.tiers || []).slice().sort((a, b) => a.pct - b.pct);
+  const t1 = tiers[0] || { nome: 'Horas Extras 75%', pct: 75 };
+  const linhas = [];
+  if (contarNormaisAtivo()) linhas.push({ nome: 'Salário horista', horas: 0.5, valor: 0.5 * sh, tipo: 'normal' });
+  linhas.push({ nome: t1.nome, horas: 2 + 4 / 60, valor: (2 + 4 / 60) * sh * (1 + t1.pct / 100), tipo: 'he' });
+  linhas.push({ nome: 'Adicional noturno', horas: 0.5, valor: 0.5 * sh * ((config.pctNoturno || 0) / 100), tipo: 'noturno' });
+  const total = linhas.reduce((s2, l) => s2 + l.valor, 0);
+  return {
+    previa: true,
+    inicioMs,
+    sub: '2º Turno · entrada (exemplo)',
+    agora: `Hora extra ${String(t1.pct).replace('.', ',')}%`,
+    valorTxt: `R$ ${fmt(total)}`,
+    prox: { hora: '22:00', cat: `Hora extra ${String(t1.pct).replace('.', ',')}% + Adicional noturno`, texto: `Às 22:00 → Hora extra ${String(t1.pct).replace('.', ',')}% + Adicional noturno` },
+    linhas,
+    segmentos: [
+      { chave: 'normal', ini: inicioMs, fim: inicioMs + 30 * 60000 },
+      { chave: 'he' + t1.pct, ini: inicioMs + 30 * 60000, fim: agora }
+    ],
+    fimMs: agora
+  };
+}
+
+function desenharPainel(info) {
+  ultimoInfoPainel = info;
+  const o = opcoesPainel();
+  const painel = document.getElementById('painelTurno');
+  painel.className = ['painel-turno', 'tema-' + o.modelo, 'rel-' + o.tamanho,
+    o.segundos ? '' : 'sem-segundos', o.proxima ? '' : 'sem-prox', o.detalhes ? '' : 'sem-detalhes', o.linhaTempo ? 'com-linha' : ''
+  ].filter(Boolean).join(' ');
+  if (o.cor) painel.style.setProperty('--pd', o.cor); else painel.style.removeProperty('--pd');
+  aplicarFundoPainel(painel, o);
+  document.body.classList.add('painel-aberto');
+
+  painelInicioMs = info.inicioMs;
+  atualizarRelogioPainel();
+  if (!painelRelogioInterval) painelRelogioInterval = setInterval(atualizarRelogioPainel, 1000);
+
+  const modelo = PAINEL_MODELOS.find(m => m.id === o.modelo) || PAINEL_MODELOS[0];
+  document.getElementById('painelNomeModelo').textContent = modelo.nome;
+  document.querySelector('#painelTurno .painel-titulo').textContent = info.previa ? '👁 Prévia do painel' : '⏱️ Turno em andamento';
+  document.getElementById('painelSub').textContent = info.sub;
+  document.getElementById('painelModo').textContent = contarNormaisAtivo() ? '🕘 Normais + extras' : '⏱️ Só extras';
+  document.getElementById('painelAcoesReal').classList.toggle('hidden', !!info.previa);
+  document.getElementById('painelAcoesPrevia').classList.toggle('hidden', !info.previa);
+
+  const visor = config.pontoVisor || defaultConfig.pontoVisor;
+  const agoraEl = document.getElementById('painelAgora');
+  agoraEl.textContent = 'Agora: ' + info.agora;
+  agoraEl.className = 'painel-agora' + (/não conta|não confirmada|Intervalo/.test(info.agora) ? ' off' : /Hora extra/.test(info.agora) ? ' he' : '');
+  agoraEl.parentElement.style.display = visor.mostrarCategoria === false ? 'none' : '';
+
+  const mostrarValor = visor.mostrarValor !== false;
+  const valorEl = document.getElementById('painelValor');
+  valorEl.textContent = info.valorTxt;
+  valorEl.style.display = mostrarValor ? '' : 'none';
+  document.getElementById('painelProx').textContent = info.prox ? info.prox.texto : '';
+
+  const linhas = info.linhas.filter(l => l.horas > 0);
+  const totalHE = linhas.filter(l => l.tipo === 'he').reduce((s2, l) => s2 + l.horas, 0);
+  const noturno = linhas.filter(l => l.tipo === 'noturno').reduce((s2, l) => s2 + l.horas, 0);
+  const normais = linhas.filter(l => l.tipo === 'normal').reduce((s2, l) => s2 + l.horas, 0);
+
+  // Detalhamento
+  let html = linhas.map(l => `
+    <div class="painel-linha">
+      <div>${l.tipo === 'normal' ? 'Horas normais' : l.nome}<span class="h">${fmtHM(l.horas)}</span></div>
+      ${mostrarValor ? `<div class="v">R$ ${fmt(l.valor)}</div>` : ''}
+    </div>`).join('');
+  if (totalHE > 0) html += `<div class="painel-linha total"><div>Total de horas extras</div><div class="v">${fmtHM(totalHE)}</div></div>`;
+  document.getElementById('painelDetalhes').innerHTML = html ||
+    `<div class="painel-vazio">${contarNormaisAtivo() ? 'Nenhuma hora contada ainda.' : 'Nenhuma hora extra até agora — a contagem começa quando entrar no horário de hora extra.'}</div>`;
+
+  // Cartões
+  const tiles = [];
+  if (mostrarValor) tiles.push(`<div class="painel-tile largo"><div class="t-rot">Valor até agora</div><div class="t-val verde">${info.valorTxt}</div></div>`);
+  tiles.push(`<div class="painel-tile"><div class="t-rot">Horas extras</div><div class="t-val">${fmtHM(totalHE)}</div></div>`);
+  tiles.push(`<div class="painel-tile"><div class="t-rot">Noturno</div><div class="t-val">${fmtHM(noturno)}</div></div>`);
+  if (contarNormaisAtivo()) tiles.push(`<div class="painel-tile"><div class="t-rot">Horas normais</div><div class="t-val">${fmtHM(normais)}</div></div>`);
+  linhas.filter(l => l.tipo === 'he').forEach(l => {
+    tiles.push(`<div class="painel-tile"><div class="t-rot">${l.nome.replace(/^Horas? Extras? /i, 'HE ')}</div><div class="t-val">${fmtHM(l.horas)}</div>${mostrarValor ? `<div class="t-sub">R$ ${fmt(l.valor)}</div>` : ''}</div>`);
+  });
+  if (o.proxima && info.prox) tiles.push(`<div class="painel-tile largo"><div class="t-rot">Próxima mudança · ${info.prox.hora}</div><div class="t-val" style="font-size:16px;">${info.prox.cat}</div></div>`);
+  document.getElementById('painelTiles').innerHTML = tiles.join('');
+
+  // Linha do tempo
+  const tl = document.getElementById('painelTimeline');
+  const totalMs = Math.max(1, info.fimMs - info.inicioMs);
+  const usados = {};
+  const barras = (info.segmentos || []).map(sg => {
+    usados[sg.chave] = true;
+    const left = ((sg.ini - info.inicioMs) / totalMs) * 100;
+    const width = Math.max(0.5, ((sg.fim - sg.ini) / totalMs) * 100);
+    return `<div class="tl-seg" style="left:${left}%; width:${width}%; background:${corDaChave(sg.chave)};"></div>`;
+  }).join('');
+  tl.innerHTML = `
+    <div class="tl-barra">${barras}</div>
+    <div class="tl-horas"><span>${fmtHoraCurta(new Date(info.inicioMs))}</span><span>agora ${fmtHoraCurta(new Date(info.fimMs))}</span></div>
+    <div class="tl-legenda">${Object.keys(usados).map(k => `<span><i style="background:${corDaChave(k)}"></i>${nomeDaChave(k)}</span>`).join('')}</div>`;
+
+  painel.classList.remove('hidden');
+}
+
+function renderPainelTurno(dados, inicioMs) {
+  if (painelPrevia) return;
+  if (painelMinimizado) { esconderPainelTurno(); return; }
+  desenharPainel(infoPainelReal(dados, inicioMs));
+}
+
+function previsualizarPainel() {
+  painelPrevia = true;
+  desenharPainel(infoPainelPrevia());
+}
+
+function fecharPreviaPainel() {
+  painelPrevia = false;
+  esconderPainelTurno();
+  if (localStorage.getItem(PONTO_KEY) && !painelMinimizado) atualizarUIPonto();
 }
 
 function fmt(v) {
@@ -3110,6 +3695,7 @@ if (copiaPendenteDaOrigem) {
   try { localStorage.setItem(REGISTROS_KEY, JSON.stringify(converterRegistrosOrigem(copiaPendenteDaOrigem))); } catch (e) {}
 }
 initSettingsFields();
+renderOpcoesPainel();
 migrarRegistrosModo();
 renderTiersCalc();
 setHistoricoView(historicoView);
