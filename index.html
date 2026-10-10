@@ -74,6 +74,11 @@
     margin-bottom: 5px;
   }
   .field .hint { font-size: 11px; color: #5f7d99; margin-top: 3px; }
+  .hint { font-size: 11px; color: #5f7d99; margin-top: 6px; line-height: 1.4; }
+  body:not(.mostrar-ajuda) .hint:not(.hint-fixa) { display: none; }
+  .modo-switch { display: flex; gap: 6px; background: #0f1e30; border: 1px solid #2a4763; border-radius: 12px; padding: 4px; margin-bottom: 14px; }
+  .modo-switch button { flex: 1; border: none; border-radius: 9px; padding: 10px 6px; font-size: 13px; font-weight: 600; background: transparent; color: #7fa8cc; cursor: pointer; }
+  .modo-switch button.ativo { background: #e65100; color: #fff; }
   input[type="number"], input[type="text"] {
     width: 100%;
     background: #0f1e30;
@@ -230,6 +235,10 @@
 
   <!-- CALCULAR -->
   <div id="tab-calc">
+    <div class="modo-switch">
+      <button type="button" id="modoBtnExtras" onclick="definirModoContagem(false)">⏱️ Só horas extras</button>
+      <button type="button" id="modoBtnNormais" onclick="definirModoContagem(true)">🕘 Normais + extras</button>
+    </div>
     <div id="avisoEdicao" class="hidden" style="background:#2a3a1e; border:1px solid #5a7a2a; border-radius:10px; padding:10px 14px; margin-bottom:14px; font-size:13px; color:#d4e8a8; display:flex; justify-content:space-between; align-items:center;">
       <span>✏️ Editando o registro de <strong id="avisoEdicaoData"></strong></span>
       <button onclick="cancelarEdicao()" style="background:none; border:none; color:#d4e8a8; text-decoration:underline; font-size:12px; cursor:pointer;">Cancelar</button>
@@ -284,15 +293,22 @@
       <div class="field">
         <label>Data</label>
         <input type="date" id="dataRegistro" onchange="atualizarDiaSemana()">
-        <div class="hint" id="diaSemanaHint"></div>
+        <div class="hint hint-fixa" id="diaSemanaHint"></div>
         <div class="hint">O ciclo vai do dia 16 de um mês até o dia 15 do mês seguinte — o ciclo é calculado automaticamente pela data.</div>
       </div>
     </div>
 
     <div class="card">
-      <h2>Adicional noturno (nas horas extras)</h2>
+      <h2>Horas trabalhadas</h2>
+      <div class="field" id="campoHorasNormais">
+        <label>Horas normais</label>
+        <div class="row">
+          <div class="field"><input type="number" id="horasNormaisH" min="0" step="1" placeholder="horas" inputmode="numeric"></div>
+          <div class="field"><input type="number" id="horasNormaisM" min="0" max="59" step="1" placeholder="min" inputmode="numeric"></div>
+        </div>
+      </div>
       <div class="field">
-        <label>Horas extras no período noturno</label>
+        <label id="labelNoturno">Horas com adicional noturno</label>
         <div class="row">
           <div class="field"><input type="number" id="horasNoturnoH" min="0" step="1" placeholder="horas" inputmode="numeric"></div>
           <div class="field"><input type="number" id="horasNoturnoM" min="0" max="59" step="1" placeholder="min" inputmode="numeric"></div>
@@ -336,7 +352,7 @@
       <div class="field">
         <label>Valor da hora normal (R$)</label>
         <input type="number" id="salarioHora" step="0.01" inputmode="decimal">
-        <div class="hint">Usado só como base para calcular o valor das horas extras — as horas normais em si não são lançadas nem somadas.</div>
+        <div class="hint">No modo "Só horas extras" é usado só como base para o valor das horas extras. No modo "Normais + extras" também paga as horas normais.</div>
       </div>
     </div>
 
@@ -360,7 +376,7 @@
         <input type="checkbox" id="noturnoHoraReduzida">
         <label for="noturnoHoraReduzida">Aplicar hora reduzida (fictícia)</label>
       </div>
-      <div class="hint">Aplicado sobre o valor da hora normal, para o horário configurado. Padrão CLT: 22:00 às 05:00. Neste app o adicional noturno só conta nos minutos que são hora extra — hora normal à noite não entra.</div>
+      <div class="hint">Aplicado sobre o valor da hora normal, para o horário configurado. Padrão CLT: 22:00 às 05:00. No modo "Só horas extras" o adicional noturno só conta nos minutos de hora extra.</div>
       <div class="hint">Hora reduzida: cada hora noturna trabalhada (52min30s) é contada como 1h remunerada — as horas de relógio do período noturno são multiplicadas por ≈1,1428 (60 ÷ 52,5) antes de calcular o adicional. Aplicado apenas pelo botão Ponto.</div>
     </div>
 
@@ -381,7 +397,7 @@
         <select id="baseCalcPericulosidade" class="hidden">
           <option value="he" selected>Horas extras</option>
         </select>
-        <div class="hint">Calculada sobre o valor das horas extras. Aplicada por ciclo (16 a 15) através do botão "☣️ Aplicar periculosidade" na aba Histórico → Resumo, sobre o total de lançamentos daquele ciclo.</div>
+        <div class="hint">Calculada sobre as horas extras (e sobre as horas normais, quando o modo "Normais + extras" estiver em uso). Aplicada por ciclo (16 a 15) através do botão "☣️ Aplicar periculosidade" na aba Histórico → Resumo, sobre o total de lançamentos daquele ciclo.</div>
       </div>
     </div>
 
@@ -402,6 +418,10 @@
       <div class="checkbox-row">
         <input type="checkbox" id="visorMostrarCategoria">
         <label for="visorMostrarCategoria">Mostrar categoria atual ("Agora: ...")</label>
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="mostrarAjuda" onchange="alternarAjuda()">
+        <label for="mostrarAjuda">Mostrar textos de explicação nas telas</label>
       </div>
       <div class="hint">"Manter a tela ligada" depende do navegador — se não funcionar no seu aparelho, a tela pode apagar normalmente.</div>
     </div>
@@ -459,7 +479,7 @@
       <div class="hint">"Seg 00-05h" é a madrugada de segunda-feira (00:00 às 05:00) — configure separado, já que esse período costuma seguir a regra de quem trabalhou no domingo, não a de segunda comum.</div>
       <div id="horariosPontoContainer"></div>
       <button class="add-tier" onclick="addFaixaHorario()">+ Adicionar faixa</button>
-      <div class="hint">Válido para todos os turnos. O turno usado em cada cálculo é escolhido no seletor "Turno" dentro do card Ponto, na aba Calcular (serve para identificar no histórico e para o aviso de turno errado). Percentual 0 = hora normal (não conta neste app). As faixas de cada dia precisam cobrir as 24h, sem sobras.</div>
+      <div class="hint">Válido para todos os turnos. O turno usado em cada cálculo é escolhido no seletor "Turno" dentro do card Ponto, na aba Calcular (serve para identificar no histórico e para o aviso de turno errado). Percentual 0 = hora normal. As faixas de cada dia precisam cobrir as 24h, sem sobras.</div>
     </div>
 
     <div class="card">
@@ -514,7 +534,7 @@
         ⬆️ Importar backup
         <input type="file" accept="application/json" style="display:none" onchange="importarBackup(event)">
       </label>
-      <div class="hint">Aceita também backups do app Horas &amp; Adicionais — as horas normais são removidas automaticamente.</div>
+      <div class="hint">Aceita também backups do app Horas &amp; Adicionais — no modo "Só horas extras" as horas normais são removidas.</div>
       <div class="hint">Exporta configurações e todo o histórico para um arquivo que você pode guardar (Drive, WhatsApp etc.) e importar depois — inclusive em outro aparelho.</div>
     </div>
 
@@ -543,6 +563,8 @@
         <li><b>"Das 6 às 14 sábado, segundo turno, feriado"</b></li>
         <li><b>"Hoje 2 horas de 75% e 1 hora e meia de 100%"</b> — lançamento manual</li>
         <li><b>"Dia 7, 40 minutos de 162,5% e salvar"</b> — "salvar" já grava no histórico</li>
+        <li><b>"8 horas normais e 2 de 75%"</b> — liga o modo Normais + extras</li>
+        <li><b>"Só horas extras"</b> / <b>"Contar horas normais"</b> — troca o modo</li>
       </ul>
     </details>
     <div style="display:flex; gap:8px; margin-top:14px;">
@@ -688,6 +710,46 @@ let copiaPendenteDaOrigem = null;
 })();
 
 let config = loadConfig();
+
+function contarNormaisAtivo() { return !!config.contarNormais; }
+
+function aplicarModoContagemUI() {
+  const normais = contarNormaisAtivo();
+  document.getElementById('modoBtnExtras').classList.toggle('ativo', !normais);
+  document.getElementById('modoBtnNormais').classList.toggle('ativo', normais);
+  document.getElementById('campoHorasNormais').classList.toggle('hidden', !normais);
+  document.getElementById('labelNoturno').textContent = normais ? 'Horas com adicional noturno' : 'Horas extras no período noturno';
+  const sub = document.querySelector('header p');
+  if (sub) sub.textContent = normais ? 'Horas normais + horas extras' : 'Somente horas extras — horas normais não entram no cálculo';
+  if (!normais) {
+    document.getElementById('horasNormaisH').value = '';
+    document.getElementById('horasNormaisM').value = '';
+  }
+}
+
+function definirModoContagem(normais) {
+  if (contarNormaisAtivo() === normais) return;
+  config.contarNormais = normais;
+  salvarConfigSilent();
+  aplicarModoContagemUI();
+  const entradaVal = document.getElementById('pontoEntradaInput').value;
+  const saidaVal = document.getElementById('pontoSaidaInput').value;
+  if (localStorage.getItem(PONTO_KEY)) {
+    atualizarUIPonto();
+  } else if (entradaVal && saidaVal) {
+    const r = classificarPeriodo(new Date(entradaVal).getTime(), new Date(saidaVal).getTime(), document.getElementById('pontoFeriado').checked, undefined, decisoesHE);
+    if (r.totalMinutos > 0) { preencherCamposComBuckets(r.buckets, null, r.minutosNoturno); calcular(); }
+  } else if (!document.getElementById('resultados').classList.contains('hidden')) {
+    calcular();
+  }
+  vozToast(normais ? '🕘 Contando horas normais + extras' : '⏱️ Contando só horas extras');
+}
+
+function alternarAjuda() {
+  config.mostrarAjuda = document.getElementById('mostrarAjuda').checked;
+  salvarConfigSilent();
+  document.body.classList.toggle('mostrar-ajuda', !!config.mostrarAjuda);
+}
 
 function loadConfig() {
   try {
@@ -1187,14 +1249,20 @@ function segmentosDoTurno(inicioMs, fimMs, forcarFeriado, turnoId, decisoes) {
       const c = classificarMinutoTurno(tipoDia, minutoDoDia, cursor.getTime(), antecipada);
       let chave = c.cat === 'normal' ? 'normal' : `he${c.pct}`;
       chave = blocos.aplicar(chave, cursor.getTime());
-      if (chave === 'recusada') chave = 'normal';
+      if (chave === 'recusada') {
+        // hora extra recusada ("Não"): não conta como nada
+        if (chaveAtual !== null) { segPrincipal.push({ chave: chaveAtual, inicio: inicioAtual, fim: new Date(cursor) }); chaveAtual = null; }
+        if (noturnoAberto) { segNoturno.push({ inicio: inicioNoturnoAtual, fim: new Date(cursor) }); noturnoAberto = false; }
+        cursor.setMinutes(cursor.getMinutes() + 1);
+        continue;
+      }
       if (chave !== chaveAtual) {
         if (chaveAtual !== null) segPrincipal.push({ chave: chaveAtual, inicio: inicioAtual, fim: new Date(cursor) });
         chaveAtual = chave;
         inicioAtual = new Date(cursor);
       }
 
-      const dentroNoturno = chave !== 'normal' && (noturnoIni <= noturnoFim
+      const dentroNoturno = (chave !== 'normal' || contarNormaisAtivo()) && (noturnoIni <= noturnoFim
         ? (minutoDoDia >= noturnoIni && minutoDoDia <= noturnoFim)
         : (minutoDoDia >= noturnoIni || minutoDoDia <= noturnoFim));
       if (dentroNoturno && !noturnoAberto) { noturnoAberto = true; inicioNoturnoAtual = new Date(cursor); }
@@ -1256,10 +1324,10 @@ function classificarPeriodo(inicio, fim, forcarFeriado, turnoId, decisoes) {
     const c = classificarMinutoTurno(tipoDia, minutoDoDia, cursor.getTime(), antecipada);
     let chave = c.cat === 'normal' ? 'normal' : `he${c.pct}`;
     chave = blocos.aplicar(chave, cursor.getTime());
-    if (chave === 'recusada') { minutosRecusados++; chave = 'normal'; }
+    if (chave === 'recusada') { minutosRecusados++; cursor.setMinutes(cursor.getMinutes() + 1); continue; }
     buckets[chave] = (buckets[chave] || 0) + 1;
 
-    const dentroNoturno = chave !== 'normal' && (noturnoIni <= noturnoFim
+    const dentroNoturno = (chave !== 'normal' || contarNormaisAtivo()) && (noturnoIni <= noturnoFim
       ? (minutoDoDia >= noturnoIni && minutoDoDia <= noturnoFim)
       : (minutoDoDia >= noturnoIni || minutoDoDia <= noturnoFim));
     if (dentroNoturno) minutosNoturno++;
@@ -1312,6 +1380,9 @@ const notificadosHE = {};
 function preencherCamposComBuckets(buckets, inicio, minutosNoturno) {
   const restantes = { ...buckets };
 
+  const hmNormal = decimalParaHM(contarNormaisAtivo() ? (restantes['normal'] || 0) / 60 : 0);
+  document.getElementById('horasNormaisH').value = contarNormaisAtivo() ? hmNormal.h : '';
+  document.getElementById('horasNormaisM').value = contarNormaisAtivo() ? hmNormal.m : '';
   delete restantes['normal'];
 
   if (typeof minutosNoturno === 'number') {
@@ -1387,10 +1458,12 @@ function recalcularPonto(autoSalvar) {
     : `\n\nTurno usado: ${turnoAtual.nome || turnoAtivoId()}.`;
 
   const minutosHE = Object.keys(buckets).filter(k => k !== 'normal').reduce((s2, k) => s2 + buckets[k], 0);
-  const avisoHE = `\n\nHoras extras: ${fmtHM(minutosHE / 60)} (horas normais não contam).` +
+  const avisoHE = (contarNormaisAtivo()
+      ? `\n\nHoras normais: ${fmtHM((buckets['normal'] || 0) / 60)} · Horas extras: ${fmtHM(minutosHE / 60)}.`
+      : `\n\nHoras extras: ${fmtHM(minutosHE / 60)} (horas normais não contam).`) +
     (minutosRecusados > 0 ? `\n${fmtHM(minutosRecusados / 60)} de hora extra não confirmada (respondeu "Não") — não contada.` : '');
   if (autoSalvar) {
-    if (minutosHE <= 0) {
+    if (minutosHE <= 0 && !contarNormaisAtivo()) {
       alert(`Turno finalizado: ${fmtHM(totalMinutos / 60)}, sem nenhuma hora extra — nada foi salvo no histórico.`);
       return;
     }
@@ -1543,7 +1616,7 @@ function categoriaAgora(forcarFeriado) {
   }
 
   const c = classificarMinuto(tipoDia, minutoDoDia);
-  if (c.cat === 'normal') return 'Hora normal (não conta)';
+  if (c.cat === 'normal') return contarNormaisAtivo() ? 'Hora normal' : 'Hora normal (não conta)';
   if (heRecusadaAgora) return 'Hora extra não confirmada (não conta)';
   let categoria = `Hora extra ${c.pct}%`;
 
@@ -1691,7 +1764,12 @@ function calcular() {
     if (horas > 0) heLines.push({ nome: tier.nome, horas, valor });
   });
 
-  const total = valorNoturno + totalHE;
+  const horasNormais = contarNormaisAtivo() ? hmParaDecimal(
+    document.getElementById('horasNormaisH').value,
+    document.getElementById('horasNormaisM').value
+  ) : 0;
+  const valorNormal = horasNormais * config.salarioHora;
+  const total = valorNormal + valorNoturno + totalHE;
 
   const linesEl = document.getElementById('resultLines');
   linesEl.innerHTML = '';
@@ -1706,6 +1784,9 @@ function calcular() {
     linesEl.appendChild(div);
   }
 
+  if (horasNormais > 0) {
+    addLine('Salário horista', `${fmtHM(horasNormais)} × R$ ${fmt(config.salarioHora)}`, valorNormal);
+  }
   if (horasNoturno > 0) {
     addLine('Adicional noturno', `${fmtHM(horasNoturno)} × ${config.pctNoturno}%`, valorNoturno);
   }
@@ -1725,6 +1806,7 @@ function calcular() {
   document.getElementById('resultados').classList.remove('hidden');
 
   const linhas = [];
+  if (horasNormais > 0) linhas.push({ nome: 'Salário horista', horas: horasNormais, valor: valorNormal, tipo: 'normal' });
   if (horasNoturno > 0) linhas.push({ nome: 'Adicional noturno', horas: horasNoturno, valor: valorNoturno, tipo: 'noturno' });
   heLines.forEach(l => linhas.push({ nome: l.nome, horas: l.horas, valor: l.valor, tipo: 'he' }));
 
@@ -1812,6 +1894,12 @@ function editarRegistro(id) {
   document.getElementById('dataRegistro').value = r.data || '';
   atualizarDiaSemana();
 
+
+  const linhaNormal = r.linhas.find(l => l.tipo === 'normal');
+  if (linhaNormal && !contarNormaisAtivo()) { config.contarNormais = true; salvarConfigSilent(); aplicarModoContagemUI(); }
+  const hmNormal = decimalParaHM(linhaNormal ? linhaNormal.horas : 0);
+  document.getElementById('horasNormaisH').value = linhaNormal ? hmNormal.h : '';
+  document.getElementById('horasNormaisM').value = linhaNormal ? hmNormal.m : '';
 
   const linhaNoturno = r.linhas.find(l => l.tipo === 'noturno');
   const hmNoturno = decimalParaHM(linhaNoturno ? linhaNoturno.horas : 0);
@@ -1955,7 +2043,7 @@ function aplicarPericulosidadeCiclo(chave) {
     });
   });
 
-  const base = baseHE;
+  const base = baseHE + baseSalario;
   const valor = base * (config.pctPericulosidade / 100);
 
   if (valor <= 0) {
@@ -1963,7 +2051,7 @@ function aplicarPericulosidadeCiclo(chave) {
     return;
   }
 
-  if (!confirm(`Aplicar periculosidade de ${config.pctPericulosidade}% sobre as horas extras deste ciclo?\n\nValor: R$ ${fmt(valor)}`)) return;
+  if (!confirm(`Aplicar periculosidade de ${config.pctPericulosidade}% sobre ${baseSalario > 0 ? 'horas normais + horas extras' : 'as horas extras'} deste ciclo?\n\nValor: R$ ${fmt(valor)}`)) return;
 
   registros = registros.filter(r => !(r.ciclo === chave && r.periculosidadeCiclo));
 
@@ -1989,7 +2077,7 @@ function renderListaFeriados() {
   const feriados = (config.feriados || []).slice().sort();
 
   if (feriados.length === 0) {
-    container.innerHTML = `<div class="hint" style="margin:0;">Nenhum feriado cadastrado ainda.</div>`;
+    container.innerHTML = `<div class="hint hint-fixa" style="margin:0;">Nenhum feriado cadastrado ainda.</div>`;
     return;
   }
 
@@ -2121,6 +2209,9 @@ function recalcularCiclo(chave) {
       if (res.totalMinutos > 0) {
         const fator = config.noturnoHoraReduzida ? (60 / 52.5) : 1;
         const novas = [];
+        if (contarNormaisAtivo() && (res.buckets['normal'] || 0) > 0) {
+          novas.push({ nome: 'Salário horista', horas: res.buckets['normal'] / 60, valor: 0, tipo: 'normal' });
+        }
         const horasNot = (res.minutosNoturno / 60) * fator;
         if (horasNot > 0) novas.push({ nome: 'Adicional noturno', horas: horasNot, valor: 0, tipo: 'noturno' });
         (config.tiers || []).forEach(t => {
@@ -2133,7 +2224,7 @@ function recalcularCiclo(chave) {
       }
     }
 
-    r.linhas = r.linhas.filter(l => l.tipo !== 'normal');
+    if (!contarNormaisAtivo()) r.linhas = r.linhas.filter(l => l.tipo !== 'normal');
     let totalRegistro = 0;
     r.linhas.forEach(l => {
       if (l.tipo === 'normal') {
@@ -2188,11 +2279,15 @@ function renderHistorico() {
       const horasExtrasCiclo = entradas.reduce((s, r) => s + (r.horasExtrasTotal || 0), 0);
 
       let horasNoturnoCiclo = 0, valorNoturnoCiclo = 0;
+      let horasNormaisCiclo = 0, valorNormaisCiclo = 0;
       const porFaixaHoras = {};
       const porFaixaValor = {};
       entradas.forEach(r => {
         r.linhas.forEach(l => {
-          if (l.tipo === 'noturno') {
+          if (l.tipo === 'normal') {
+            horasNormaisCiclo += l.horas;
+            valorNormaisCiclo += l.valor;
+          } else if (l.tipo === 'noturno') {
             horasNoturnoCiclo += l.horas;
             valorNoturnoCiclo += l.valor;
           } else if (l.tipo === 'he') {
@@ -2216,6 +2311,7 @@ function renderHistorico() {
       `;
 
       const normaisNoturnoHtml =
+        (horasNormaisCiclo > 0 ? linhaResumo('Horas normais', horasNormaisCiclo, valorNormaisCiclo) : '') +
         (horasNoturnoCiclo > 0 ? linhaResumo('Adicional noturno', horasNoturnoCiclo, valorNoturnoCiclo) : '');
 
       const faixasHtml = faixasOrdenadas.map(nome => linhaResumo(nome, porFaixaHoras[nome], porFaixaValor[nome])).join('') + (faixasOrdenadas.length > 0 ? `
@@ -2367,7 +2463,7 @@ function exportarBackup() {
 function converterRegistrosOrigem(lista) {
   const fator = config.noturnoHoraReduzida ? (60 / 52.5) : 1;
   return (lista || []).filter(r => !r.periculosidadeCiclo && !r.dsrCiclo).map(r => {
-    const novo = { ...r, linhas: (r.linhas || []).filter(l => l.tipo !== 'normal').map(l => ({ ...l })) };
+    const novo = { ...r, linhas: (r.linhas || []).filter(l => contarNormaisAtivo() || l.tipo !== 'normal').map(l => ({ ...l })) };
     if (r.pontoEntrada && r.pontoSaida) {
       const res = classificarPeriodo(new Date(r.pontoEntrada).getTime(), new Date(r.pontoSaida).getTime(), !!r.feriado, r.turno || 'turno1');
       const horasNot = (res.minutosNoturno / 60) * fator;
@@ -2598,7 +2694,16 @@ function interpretarComandoVoz(textoOriginal) {
   }
 
   // Lançamento manual: "2 horas de 75%", "40 minutos de 100%"
-  if (/\b\d+(?:\.\d+)?%/.test(t)) {
+  const mNormais = t.match(/\b(\d+(?:\.\d+)?)(?:\s*:\s*(\d{1,2}))?\s*(horas?|hrs?|h|minutos?|min)?(?:\s+e\s+(\d{1,2})\s*(?:minutos?|min)?)?\s*(?:de\s+)?(?:horas?\s+)?norma(?:l|is)\b/);
+  const horasNormaisVoz = mNormais ? (/^min/.test(mNormais[3] || '') ? parseFloat(mNormais[1]) / 60 : parseFloat(mNormais[1]) + parseInt(mNormais[2] || mNormais[4] || '0') / 60) : 0;
+  if (/\b(so|somente|apenas)\s+(horas?\s+)?extras?\b/.test(t) && !/\d/.test(t)) {
+    return { resumo: 'Modo: só horas extras', acao: () => definirModoContagem(false) };
+  }
+  if (/\b(contar|conta|incluir|com)\s+(as\s+)?(horas?\s+)?normais\b/.test(t) && !/\d/.test(t)) {
+    return { resumo: 'Modo: horas normais + extras', acao: () => definirModoContagem(true) };
+  }
+
+  if (/\b\d+(?:\.\d+)?%/.test(t) || horasNormaisVoz > 0) {
     const { data } = vozDataBase(t);
     const reHE = /\b(\d+(?:\.\d+)?)(?:\s*:\s*(\d{1,2}))?\s*(horas?|hrs?|h|minutos?|min)?(?:\s+e\s+(\d{1,2})\s*(?:minutos?|min)?)?\s*(?:de\s+)?(?:horas?\s+)?(?:extras?\s*)?(?:de|a|com)?\s*\b(\d+(?:\.\d+)?)%/g;
     const porTier = {};
@@ -2619,12 +2724,14 @@ function interpretarComandoVoz(textoOriginal) {
       const num = parseFloat(mn[1]);
       noturno = /^min/.test(mn[3] || '') ? num / 60 : num + (parseInt(mn[2] || mn[4] || '0') / 60);
     }
-    if (Object.keys(porTier).length === 0) {
+    if (Object.keys(porTier).length === 0 && !(horasNormaisVoz > 0)) {
       return { erro: semFaixa.length
         ? `Não existe faixa de hora extra de ${semFaixa.join(', ')} em Configurações.`
         : 'Não entendi as horas. Ex.: "2 horas de 75%".' };
     }
-    const partes = Object.keys(porTier).map(i => `${fmtHM(porTier[i])} de ${String(config.tiers[i].pct).replace('.', ',')}%`);
+    const partes = [];
+    if (horasNormaisVoz > 0) partes.push(`${fmtHM(horasNormaisVoz)} normais`);
+    Object.keys(porTier).map(i => `${fmtHM(porTier[i])} de ${String(config.tiers[i].pct).replace('.', ',')}%`).forEach(p => partes.push(p));
     if (noturno) partes.push(`${fmtHM(noturno)} de adicional noturno`);
     let resumo = `${formatarData(vozDataStr(data))}: ${partes.join(' + ')}`;
     if (semFaixa.length) resumo += `\n(sem faixa configurada: ${semFaixa.join(', ')})`;
@@ -2646,6 +2753,10 @@ function interpretarComandoVoz(textoOriginal) {
           inputH.value = porTier[idx] ? hm.h : '';
           if (inputM) inputM.value = porTier[idx] ? hm.m : '';
         });
+        if (horasNormaisVoz > 0 && !contarNormaisAtivo()) { config.contarNormais = true; salvarConfigSilent(); aplicarModoContagemUI(); }
+        const hmNor = decimalParaHM(horasNormaisVoz);
+        document.getElementById('horasNormaisH').value = horasNormaisVoz > 0 ? hmNor.h : '';
+        document.getElementById('horasNormaisM').value = horasNormaisVoz > 0 ? hmNor.m : '';
         const hmN = decimalParaHM(noturno || 0);
         document.getElementById('horasNoturnoH').value = noturno ? hmN.h : '';
         document.getElementById('horasNoturnoM').value = noturno ? hmN.m : '';
@@ -2900,6 +3011,9 @@ function initSettingsFields() {
   horariosDraft = JSON.parse(JSON.stringify(config.horariosPonto || defaultConfig.horariosPonto));
   renderHorariosPonto();
   atualizarBotoesDiaHorario();
+  document.getElementById('mostrarAjuda').checked = !!config.mostrarAjuda;
+  document.body.classList.toggle('mostrar-ajuda', !!config.mostrarAjuda);
+  aplicarModoContagemUI();
 }
 
 if (copiaPendenteDaOrigem) {
