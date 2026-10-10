@@ -294,6 +294,40 @@
   .seg-linha button { flex: 1; background: #0f1e30; border: 1px solid #2a4763; color: #7fa8cc; border-radius: 8px; padding: 8px; font-size: 13px; cursor: pointer; }
   .seg-linha button.ativo { background: #e65100; border-color: #e65100; color: #fff; }
   .opc-rotulo { font-size: 12px; color: #7fa8cc; margin: 14px 0 8px; }
+  /* ---- Resumo do ciclo no painel ---- */
+  .painel-resumo { margin-top: 16px; background: var(--pcard); border: 1px solid var(--pborda); border-radius: 14px; padding: 12px 14px; }
+  .painel-turno.sem-resumo .painel-resumo { display: none; }
+  .pr-topo { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .pr-titulo { font-size: 12px; color: var(--psub); text-transform: uppercase; letter-spacing: .5px; }
+  .pr-pag { font-size: 11px; color: var(--psub); white-space: nowrap; }
+  .pr-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+  .pr-item .r { font-size: 11px; color: var(--psub); }
+  .pr-item .n { font-size: 22px; font-weight: 700; color: var(--ptxt); font-variant-numeric: tabular-nums; }
+  .pr-item .n.verde { color: var(--pvalor); }
+  .pr-item .d { font-size: 11px; color: var(--psub); }
+  .pr-faixas { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .pr-faixas span { font-size: 12px; padding: 4px 9px; border-radius: 999px; background: rgba(255,255,255,.06); border: 1px solid var(--pborda); color: var(--ptxt); }
+  .pr-faixas i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+  .com-fundo .painel-resumo { background: rgba(8, 16, 28, .55); border-color: rgba(255,255,255,.12); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  .com-fundo.tema-claro .painel-resumo { background: rgba(255,255,255,.72); border-color: rgba(0,0,0,.08); }
+  .tema-claro .pr-faixas span { background: rgba(0,0,0,.04); }
+  /* ---- Travamento (Admin) ---- */
+  .card-travada { position: relative; }
+  .trava-overlay { position: absolute; left: 0; right: 0; bottom: 0; top: 52px; z-index: 5; cursor: not-allowed; border-radius: 0 0 14px 14px; }
+  .card-travada.collapsed .trava-overlay { display: none; }
+  body:not(.admin-livre) .card-travada input, body:not(.admin-livre) .card-travada select, body:not(.admin-livre) .card-travada button { opacity: .55; }
+  body.admin-livre .trava-overlay { display: none; }
+  .badge-trava { font-size: 13px; margin-left: 6px; }
+  h2 > .badge-trava { margin-right: auto; }
+  .admin-modal { position: fixed; inset: 0; z-index: 1000; background: rgba(5,12,22,.82); display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .admin-box { width: 100%; max-width: 380px; background: #14263b; border: 1px solid #2a4763; border-radius: 16px; padding: 20px; text-align: center; }
+  .admin-box h3 { font-size: 18px; color: #ffb74d; margin-bottom: 10px; }
+  .admin-box p { font-size: 14px; color: #c9d6e3; line-height: 1.45; }
+  .admin-box input { width: 100%; margin-top: 14px; background: #0f1e30; border: 1px solid #2a4763; border-radius: 10px; padding: 12px; color: #e8edf4; font-size: 20px; text-align: center; letter-spacing: 6px; }
+  .admin-erro { color: #f28b9a; font-size: 13px; margin-top: 8px; min-height: 16px; }
+  .admin-status { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #e8edf4; }
+  .admin-status b { font-size: 22px; }
+
   /* ---- Imagem de fundo do painel ---- */
   .painel-fundo, .painel-fundo-veu { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
   .painel-fundo { background-size: cover; background-position: center; }
@@ -394,7 +428,7 @@
       </div>
       <div class="checkbox-row">
         <input type="checkbox" id="pontoFeriado">
-        <label for="pontoFeriado">Forçar regra de feriado no turno inteiro</label>
+        <label for="pontoFeriado" onclick="if (travado()) { event.preventDefault(); abrirAvisoTrava(); }">Forçar regra de feriado no turno inteiro <span class="badge-trava" id="badgeFeriadoTrava"></span></label>
       </div>
       <div class="hint hint-fixa" id="avisoFeriadoCadastrado" style="display:none; color:#ffb74d; font-size:12px; margin:-2px 0 8px;"></div>
       <div class="checkbox-row">
@@ -567,6 +601,7 @@
       <div class="checkbox-row"><input type="checkbox" id="painelOpcProxima" onchange="definirOpcaoPainel('proxima', this.checked)"><label for="painelOpcProxima">Próxima mudança de categoria</label></div>
       <div class="checkbox-row"><input type="checkbox" id="painelOpcDetalhes" onchange="definirOpcaoPainel('detalhes', this.checked)"><label for="painelOpcDetalhes">Detalhamento das horas</label></div>
       <div class="checkbox-row"><input type="checkbox" id="painelOpcLinha" onchange="definirOpcaoPainel('linhaTempo', this.checked)"><label for="painelOpcLinha">Linha do tempo do turno (barra colorida)</label></div>
+      <div class="checkbox-row"><input type="checkbox" id="painelOpcResumo" onchange="definirOpcaoPainel('resumo', this.checked)"><label for="painelOpcResumo">Resumo do mês (ciclo 16 a 15)</label></div>
       <button class="btn-secondary" onclick="previsualizarPainel()">👁 Ver prévia do painel</button>
       <div class="hint">No próprio painel, o botão 🎨 troca de modelo na hora.</div>
     </div>
@@ -698,6 +733,14 @@
     </div>
 
     <div class="card">
+      <h2>🔐 Administrador</h2>
+      <div class="admin-status"><b id="adminStatusIcone">🔒</b><span id="adminStatusTexto"></span></div>
+      <div class="hint hint-fixa" style="margin-top:8px;">Bloqueadas: Adicional noturno, Faixas de hora extra, Periculosidade, Turnos, Horários do Ponto, Feriados, Intervalos e a opção "Forçar feriado". Valor da hora, aparência, painel, histórico e backup continuam liberados para cada pessoa.</div>
+      <button class="btn-secondary" id="adminBtnAlternar" onclick="alternarAdmin()"></button>
+      <button class="btn-secondary hidden" id="adminBtnCopiar" onclick="copiarRegrasAdmin()">📋 Copiar regras atuais (para virar o padrão do app)</button>
+    </div>
+
+    <div class="card">
       <h2>Backup</h2>
       <button class="btn-secondary" onclick="exportarBackup()">⬇️ Exportar backup (.json)</button>
       <label class="btn-secondary" style="display:block; text-align:center; margin-top:8px; cursor:pointer;">
@@ -734,6 +777,7 @@
     <div class="painel-tiles" id="painelTiles"></div>
     <div class="painel-timeline" id="painelTimeline"></div>
     <div class="painel-detalhes" id="painelDetalhes"></div>
+    <div class="painel-resumo" id="painelResumo"></div>
     <div class="painel-acoes" id="painelAcoesReal">
       <button class="btn-finalizar" onclick="finalizarPonto()">⏹ Finalizar turno</button>
       <div class="linha">
@@ -774,6 +818,21 @@
     <div style="display:flex; gap:8px; margin-top:14px;">
       <button class="btn-primary" style="flex:1; margin-top:0;" onclick="iniciarEscutaVoz()">🎤 Falar de novo</button>
       <button class="btn-secondary" style="flex:1; margin-top:0;" onclick="fecharVoz()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div id="adminModal" class="admin-modal hidden" onclick="if (event.target === this) fecharAdminModal()">
+  <div class="admin-box">
+    <h3 id="adminModalTitulo">🔒 Configuração bloqueada</h3>
+    <p id="adminModalTexto">Esta configuração é definida pelo Admin do app e não pode ser alterada.<br><br>Para alterar, entre em contato com o <b>Admin do app</b>.</p>
+    <div id="adminPinArea" class="hidden">
+      <input type="password" id="adminPinInput" inputmode="numeric" autocomplete="off" placeholder="PIN" onkeydown="if (event.key === 'Enter') confirmarPinAdmin()">
+      <div class="admin-erro" id="adminPinErro"></div>
+    </div>
+    <div style="display:flex; gap:8px; margin-top:16px;">
+      <button class="btn-primary" style="flex:1; margin-top:0;" id="adminBtnOk" onclick="fecharAdminModal()">Entendi</button>
+      <button class="btn-secondary" style="flex:1; margin-top:0;" id="adminBtnSou" onclick="mostrarPinAdmin()">Sou o Admin</button>
     </div>
   </div>
 </div>
@@ -1077,6 +1136,23 @@ function salvarConfigSilent() {
 }
 
 function salvarConfig(showToast) {
+  const regrasAntes = travado() ? JSON.parse(JSON.stringify(CHAVES_TRAVADAS.reduce((o, k) => (o[k] = config[k], o), {}))) : null;
+  salvarConfigInterno();
+  if (regrasAntes) {
+    Object.assign(config, regrasAntes);
+    salvarConfigSilent();
+    initSettingsFields();
+    renderTiersCalc();
+    popularSelectTurno();
+  }
+  if (showToast) {
+    const t = document.getElementById('toast');
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 1800);
+  }
+}
+
+function salvarConfigInterno() {
   config.salarioHora = parseFloat(document.getElementById('salarioHora').value) || 0;
   config.pctNoturno = parseFloat(document.getElementById('pctNoturno').value) || 0;
 
@@ -1134,11 +1210,6 @@ function salvarConfig(showToast) {
   salvarConfigSilent();
   renderTiersCalc();
   popularSelectTurno();
-  if (showToast) {
-    const t = document.getElementById('toast');
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 1800);
-  }
 }
 
 function addTier() {
@@ -1923,7 +1994,7 @@ function categoriaAgora(forcarFeriado, quandoMs) {
   const c = classificarMinuto(tipoDia, minutoDoDia);
   if (c.cat === 'normal') return contarNormaisAtivo() ? 'Hora normal' : 'Hora normal (não conta)';
   if (heRecusadaAgora) return 'Hora extra não confirmada (não conta)';
-  let categoria = `Hora extra ${c.pct}%`;
+  let categoria = `Hora extra ${String(c.pct).replace('.', ',')}%`;
 
   const noturnoIni = horaParaMinutos(config.noturnoInicio || defaultConfig.noturnoInicio);
   const noturnoFim = horaParaMinutos(config.noturnoFim || defaultConfig.noturnoFim);
@@ -2030,6 +2101,142 @@ function atualizarUIPonto() {
   }
 }
 
+// ===================== TRAVAMENTO (ADMIN) =====================
+// As regras da empresa ficam bloqueadas para quem usa o link. O Admin desbloqueia
+// com o PIN (só nesta sessão do app — ao fechar, bloqueia de novo).
+// Observação: o app é uma página estática, então isso impede alterações pela tela;
+// não é uma proteção contra quem sabe mexer no código do navegador.
+const ADMIN_PIN_HASH = '7nbgz1erz3';
+const ADMIN_SESSAO_KEY = 'horasExtrasApp_adminLivre';
+const CARDS_TRAVADOS = ['Adicional noturno', 'Faixas de hora extra', 'Periculosidade', 'Turnos', 'Horários do Ponto', 'Feriados', 'Intervalos (Seg-Sex)'];
+const CHAVES_TRAVADAS = ['horariosPonto', 'tiers', 'turnos', 'intervalos', 'pctNoturno', 'noturnoInicio', 'noturnoFim', 'noturnoHoraReduzida', 'pctPericulosidade', 'baseCalcPericulosidade', 'feriados'];
+
+function hashPin(str, seed = 7) {
+  let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
+  for (let i = 0, ch; i < str.length; i++) {
+    ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507);
+  h1 ^= Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507);
+  h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+}
+
+function adminLivre() {
+  try { return sessionStorage.getItem(ADMIN_SESSAO_KEY) === ADMIN_PIN_HASH; } catch (e) { return false; }
+}
+function travado() { return !adminLivre(); }
+
+function aplicarTravamentoUI() {
+  const livre = adminLivre();
+  document.body.classList.toggle('admin-livre', livre);
+  document.querySelectorAll('#tab-settings > .card').forEach(card => {
+    const h2 = card.querySelector('h2');
+    if (!h2) return;
+    const titulo = (h2.firstChild && h2.firstChild.textContent || h2.textContent).trim();
+    if (!CARDS_TRAVADOS.includes(titulo)) return;
+    card.classList.add('card-travada');
+    if (!card.querySelector('.trava-overlay')) {
+      const ov = document.createElement('div');
+      ov.className = 'trava-overlay';
+      ov.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); abrirAvisoTrava(); });
+      card.appendChild(ov);
+      const badge = document.createElement('span');
+      badge.className = 'badge-trava';
+      h2.insertBefore(badge, h2.firstChild.nextSibling);
+    }
+    card.querySelector('.badge-trava').textContent = livre ? '🔓' : '🔒';
+    card.querySelectorAll('input, select, button').forEach(el => { el.disabled = !livre; });
+  });
+  const fer = document.getElementById('pontoFeriado');
+  if (fer) {
+    fer.disabled = !livre;
+    if (!livre) fer.checked = false;
+  }
+  const icone = document.getElementById('adminStatusIcone');
+  if (icone) {
+    icone.textContent = livre ? '🔓' : '🔒';
+    document.getElementById('adminStatusTexto').textContent = livre
+      ? 'Desbloqueado — você pode alterar as regras neste aparelho.'
+      : 'Regras da empresa bloqueadas.';
+    document.getElementById('adminBtnAlternar').textContent = livre ? '🔒 Bloquear novamente' : '🔑 Desbloquear (Admin)';
+    document.getElementById('adminBtnCopiar').classList.toggle('hidden', !livre);
+  }
+  const bf = document.getElementById('badgeFeriadoTrava');
+  if (bf) bf.textContent = livre ? '' : '🔒';
+}
+
+function abrirAvisoTrava() {
+  document.getElementById('adminModalTitulo').textContent = '🔒 Configuração bloqueada';
+  document.getElementById('adminModalTexto').innerHTML = 'Esta configuração é definida pelo Admin do app e não pode ser alterada.<br><br>Para alterar, entre em contato com o <b>Admin do app</b>.';
+  document.getElementById('adminPinArea').classList.add('hidden');
+  document.getElementById('adminBtnOk').textContent = 'Entendi';
+  document.getElementById('adminBtnOk').onclick = fecharAdminModal;
+  document.getElementById('adminBtnSou').classList.remove('hidden');
+  document.getElementById('adminModal').classList.remove('hidden');
+}
+
+function mostrarPinAdmin() {
+  document.getElementById('adminModalTitulo').textContent = '🔑 Acesso do Admin';
+  document.getElementById('adminModalTexto').textContent = 'Digite o PIN do Admin para desbloquear as configurações.';
+  document.getElementById('adminPinArea').classList.remove('hidden');
+  document.getElementById('adminPinErro').textContent = '';
+  document.getElementById('adminBtnOk').textContent = 'Desbloquear';
+  document.getElementById('adminBtnOk').onclick = confirmarPinAdmin;
+  document.getElementById('adminBtnSou').classList.add('hidden');
+  document.getElementById('adminModal').classList.remove('hidden');
+  const inp = document.getElementById('adminPinInput');
+  inp.value = '';
+  setTimeout(() => inp.focus(), 50);
+}
+
+let tentativasPin = 0;
+function confirmarPinAdmin() {
+  const pin = document.getElementById('adminPinInput').value.trim();
+  if (hashPin('horasExtras|admin|' + pin) === ADMIN_PIN_HASH) {
+    try { sessionStorage.setItem(ADMIN_SESSAO_KEY, ADMIN_PIN_HASH); } catch (e) {}
+    tentativasPin = 0;
+    fecharAdminModal();
+    aplicarTravamentoUI();
+    vozToast('🔓 Configurações desbloqueadas');
+  } else {
+    tentativasPin++;
+    document.getElementById('adminPinErro').textContent = tentativasPin >= 3
+      ? 'PIN incorreto. Entre em contato com o Admin do app.'
+      : 'PIN incorreto.';
+    document.getElementById('adminPinInput').value = '';
+  }
+}
+
+function fecharAdminModal() {
+  document.getElementById('adminModal').classList.add('hidden');
+}
+
+function alternarAdmin() {
+  if (adminLivre()) {
+    try { sessionStorage.removeItem(ADMIN_SESSAO_KEY); } catch (e) {}
+    aplicarTravamentoUI();
+    vozToast('🔒 Configurações bloqueadas');
+  } else {
+    mostrarPinAdmin();
+  }
+}
+
+function copiarRegrasAdmin() {
+  const regras = {};
+  CHAVES_TRAVADAS.forEach(k => { regras[k] = config[k]; });
+  const txt = JSON.stringify(regras, null, 2);
+  const ok = () => vozToast('📋 Regras copiadas');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt).then(ok).catch(() => prompt('Copie as regras:', txt));
+  } else {
+    prompt('Copie as regras:', txt);
+  }
+}
+
 // ===================== PAINEL DO TURNO (tela cheia) =====================
 const PAINEL_MODELOS = [
   { id: 'classico', nome: 'Clássico' },
@@ -2046,7 +2253,7 @@ const PAINEL_CORES = [
   { id: '#ff7043', cor: '#ff7043' }, { id: '#ba68c8', cor: '#ba68c8' }, { id: '#f06292', cor: '#f06292' },
   { id: '#ffee58', cor: '#ffee58' }, { id: '#ffffff', cor: '#ffffff' }
 ];
-const PAINEL_PADRAO = { modelo: 'classico', cor: '', tamanho: 'M', segundos: true, proxima: true, detalhes: true, linhaTempo: false, fundo: 'nenhum', escurecer: 45, desfoque: 0 };
+const PAINEL_PADRAO = { modelo: 'classico', cor: '', tamanho: 'M', segundos: true, proxima: true, detalhes: true, linhaTempo: false, resumo: true, fundo: 'nenhum', escurecer: 45, desfoque: 0 };
 const TL_CORES = ['#ffb74d', '#ff7043', '#ba68c8', '#f06292', '#4dd0e1', '#aed581'];
 
 let painelMinimizado = false;
@@ -2205,6 +2412,7 @@ function renderOpcoesPainel() {
   document.getElementById('painelOpcProxima').checked = !!o.proxima;
   document.getElementById('painelOpcDetalhes').checked = !!o.detalhes;
   document.getElementById('painelOpcLinha').checked = !!o.linhaTempo;
+  document.getElementById('painelOpcResumo').checked = o.resumo !== false;
   renderOpcoesFundo();
 }
 
@@ -2312,12 +2520,65 @@ function infoPainelPrevia() {
   };
 }
 
+// Resumo do ciclo (16 a 15) em que o turno está: lançamentos salvos + turno atual
+function resumoCicloPainel(info) {
+  const chave = getCicloChave(dataChave(new Date(info.inicioMs)));
+  const registros = carregarRegistros().filter(r => r.ciclo === chave && !r.periculosidadeCiclo && !r.dsrCiclo && r.id !== editandoId);
+  const res = { chave, dias: 0, horasHE: 0, valor: 0, noturno: 0, normais: 0, faixas: {}, horasHEhoje: 0, valorHoje: 0 };
+  const somar = (linhas, hoje) => {
+    linhas.forEach(l => {
+      if (!(l.horas > 0) && !(l.valor > 0)) return;
+      res.valor += l.valor || 0;
+      if (hoje) res.valorHoje += l.valor || 0;
+      if (l.tipo === 'he') {
+        res.horasHE += l.horas;
+        if (hoje) res.horasHEhoje += l.horas;
+        res.faixas[l.nome] = (res.faixas[l.nome] || 0) + l.horas;
+      } else if (l.tipo === 'noturno') res.noturno += l.horas;
+      else if (l.tipo === 'normal') res.normais += l.horas;
+    });
+  };
+  const diasVistos = {};
+  registros.forEach(r => {
+    const ls = linhasDoModo(r);
+    if (ls.some(l => (l.horas || 0) > 0)) diasVistos[r.data] = true;
+    somar(ls, false);
+  });
+  res.dias = Object.keys(diasVistos).length;
+  somar(info.linhas || [], true);
+  return res;
+}
+
+function htmlResumoCiclo(info, mostrarValor) {
+  const r = resumoCicloPainel(info);
+  const pctDe = nome => {
+    const t = (config.tiers || []).find(x => x.nome === nome);
+    return t ? t.pct : parseFloat(String(nome).replace(/[^\d,.]/g, '').replace(',', '.')) || 0;
+  };
+  const faixas = Object.keys(r.faixas).sort((a, b) => pctDe(a) - pctDe(b)).map(nome => {
+    const pct = pctDe(nome);
+    return `<span><i style="background:${corDaChave('he' + pct)}"></i>${String(pct).replace('.', ',')}%: ${fmtHM(r.faixas[nome])}</span>`;
+  }).join('');
+  const itens = [
+    `<div class="pr-item"><div class="r">Horas extras no mês</div><div class="n">${fmtHM(r.horasHE)}</div><div class="d">${r.horasHEhoje > 0 ? `+${fmtHM(r.horasHEhoje)} neste turno` : 'neste turno: 0h'}</div></div>`
+  ];
+  if (mostrarValor) itens.push(`<div class="pr-item"><div class="r">Valor no mês</div><div class="n verde">R$ ${fmt(r.valor)}</div><div class="d">${r.dias} dia${r.dias === 1 ? '' : 's'} lançado${r.dias === 1 ? '' : 's'} + este turno</div></div>`);
+  else itens.push(`<div class="pr-item"><div class="r">Dias lançados</div><div class="n">${r.dias}</div><div class="d">+ este turno</div></div>`);
+  if (r.noturno > 0) itens.push(`<div class="pr-item"><div class="r">Adicional noturno</div><div class="n">${fmtHM(r.noturno)}</div></div>`);
+  if (contarNormaisAtivo() && r.normais > 0) itens.push(`<div class="pr-item"><div class="r">Horas normais</div><div class="n">${fmtHM(r.normais)}</div></div>`);
+  return `
+    <div class="pr-topo"><div class="pr-titulo">📅 Resumo do mês · ${mesLabel(r.chave)}</div></div>
+    <div class="pr-pag">Pagamento em ${getDataPagamento(r.chave)}</div>
+    <div class="pr-grade">${itens.join('')}</div>
+    ${faixas ? `<div class="pr-faixas">${faixas}</div>` : ''}`;
+}
+
 function desenharPainel(info) {
   ultimoInfoPainel = info;
   const o = opcoesPainel();
   const painel = document.getElementById('painelTurno');
   painel.className = ['painel-turno', 'tema-' + o.modelo, 'rel-' + o.tamanho,
-    o.segundos ? '' : 'sem-segundos', o.proxima ? '' : 'sem-prox', o.detalhes ? '' : 'sem-detalhes', o.linhaTempo ? 'com-linha' : ''
+    o.segundos ? '' : 'sem-segundos', o.proxima ? '' : 'sem-prox', o.detalhes ? '' : 'sem-detalhes', o.linhaTempo ? 'com-linha' : '', o.resumo === false ? 'sem-resumo' : ''
   ].filter(Boolean).join(' ');
   if (o.cor) painel.style.setProperty('--pd', o.cor); else painel.style.removeProperty('--pd');
   aplicarFundoPainel(painel, o);
@@ -2361,6 +2622,9 @@ function desenharPainel(info) {
   if (totalHE > 0) html += `<div class="painel-linha total"><div>Total de horas extras</div><div class="v">${fmtHM(totalHE)}</div></div>`;
   document.getElementById('painelDetalhes').innerHTML = html ||
     `<div class="painel-vazio">${contarNormaisAtivo() ? 'Nenhuma hora contada ainda.' : 'Nenhuma hora extra até agora — a contagem começa quando entrar no horário de hora extra.'}</div>`;
+
+  // Resumo do mês
+  try { document.getElementById('painelResumo').innerHTML = htmlResumoCiclo(info, mostrarValor); } catch (e) { document.getElementById('painelResumo').innerHTML = ''; }
 
   // Cartões
   const tiles = [];
@@ -2785,6 +3049,7 @@ function renderListaFeriados() {
 }
 
 function adicionarFeriado() {
+  if (travado()) { abrirAvisoTrava(); return; }
   const input = document.getElementById('novoFeriadoInput');
   const dataStr = input.value;
   if (!dataStr) return;
@@ -2800,6 +3065,7 @@ function adicionarFeriado() {
 }
 
 function removerFeriado(dataStr) {
+  if (travado()) { abrirAvisoTrava(); return; }
   config.feriados = (config.feriados || []).filter(d => d !== dataStr);
   salvarConfigSilent();
   renderListaFeriados();
@@ -3197,10 +3463,15 @@ function importarBackup(event) {
       const dados = JSON.parse(e.target.result);
       if (!confirm('Importar este backup vai substituir as configurações e o histórico atuais deste aparelho. Continuar?')) return;
       if (dados.config) {
+        if (travado()) {
+          const atual = config;
+          CHAVES_TRAVADAS.forEach(k => { dados.config[k] = atual[k]; });
+        }
         config = dados.config;
         salvarConfigSilent();
         initSettingsFields();
         renderTiersCalc();
+        aplicarTravamentoUI();
       }
       if (Array.isArray(dados.registros)) {
         localStorage.setItem(REGISTROS_KEY, JSON.stringify(dados.app === 'horas-extras' ? dados.registros : converterRegistrosOrigem(dados.registros)));
@@ -3391,7 +3662,7 @@ function interpretarComandoVoz(textoOriginal) {
     }
   }
   const feriado = /\bferiado\b/.test(t);
-  if (feriado && !ativo) {
+  if (feriado && !ativo && !travado()) {
     preparar.push(() => { document.getElementById('pontoFeriado').checked = true; });
     ajustes.push('feriado');
   }
@@ -3722,6 +3993,7 @@ function initSettingsFields() {
   horariosDraft = JSON.parse(JSON.stringify(config.horariosPonto || defaultConfig.horariosPonto));
   renderHorariosPonto();
   atualizarBotoesDiaHorario();
+  if (typeof aplicarTravamentoUI === 'function' && document.body) setTimeout(aplicarTravamentoUI, 0);
   document.getElementById('mostrarAjuda').checked = !!config.mostrarAjuda;
   document.body.classList.toggle('mostrar-ajuda', !!config.mostrarAjuda);
   aplicarModoContagemUI();
@@ -3731,6 +4003,7 @@ if (copiaPendenteDaOrigem) {
   try { localStorage.setItem(REGISTROS_KEY, JSON.stringify(converterRegistrosOrigem(copiaPendenteDaOrigem))); } catch (e) {}
 }
 initSettingsFields();
+aplicarTravamentoUI();
 renderOpcoesPainel();
 migrarRegistrosModo();
 renderTiersCalc();
