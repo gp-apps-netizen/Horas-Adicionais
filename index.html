@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#1e3a5f">
-<title>Calculadora de Horas</title>
+<meta name="theme-color" content="#5a2e0f">
+<title>Horas Extras</title>
 <link rel="manifest" id="manifest-placeholder">
 <link rel="icon" id="icon-placeholder">
 <link rel="apple-touch-icon" id="apple-icon-placeholder">
@@ -171,6 +171,32 @@
   .total-box .label { font-size: 12px; color: #8fd4a8; text-transform: uppercase; letter-spacing: 0.5px; }
   .total-box .value { font-size: 28px; font-weight: 700; color: #a8f0c0; margin-top: 4px; }
   .hidden { display: none !important; }
+  .content { padding-bottom: 96px; }
+  .voz-fab {
+    position: fixed; right: 18px; bottom: 22px; z-index: 900;
+    width: 60px; height: 60px; border-radius: 50%; border: none;
+    background: #e65100; color: #fff; font-size: 26px;
+    box-shadow: 0 6px 18px rgba(0,0,0,.45); cursor: pointer;
+  }
+  .voz-fab.ouvindo { animation: vozPulso 1.1s ease-in-out infinite; background: #c62828; }
+  @keyframes vozPulso { 0%,100% { box-shadow: 0 0 0 0 rgba(230,81,0,.6); } 50% { box-shadow: 0 0 0 14px rgba(230,81,0,0); } }
+  .voz-overlay {
+    position: fixed; inset: 0; z-index: 950; background: rgba(5,12,22,.82);
+    display: flex; align-items: flex-end; justify-content: center; padding: 16px;
+  }
+  .voz-box {
+    width: 100%; max-width: 480px; background: #14263b; border: 1px solid #2a4763;
+    border-radius: 16px; padding: 18px; max-height: 90vh; overflow-y: auto;
+  }
+  .voz-status { font-size: 15px; font-weight: 600; color: #ffb74d; text-align: center; }
+  .voz-texto { min-height: 44px; margin-top: 10px; font-size: 18px; color: #e8edf4; text-align: center; font-style: italic; }
+  .voz-resultado { margin-top: 8px; font-size: 13px; color: #a8f0c0; white-space: pre-line; text-align: center; }
+  .voz-resultado.erro { color: #f28b9a; }
+  .voz-exemplos { margin-top: 12px; font-size: 12px; color: #9db4cc; }
+  .voz-exemplos summary { cursor: pointer; color: #7fa8cc; }
+  .voz-exemplos li { margin: 6px 0 0 16px; }
+  .voz-exemplos b { color: #e8edf4; font-weight: 500; }
+
   .saved-toast {
     position: fixed;
     bottom: 20px;
@@ -190,8 +216,8 @@
 <body>
 
 <header>
-  <h1>💰 Horas &amp; Adicionais</h1>
-  <p>Horas extras · adicional noturno · periculosidade</p>
+  <h1>⏱️ Horas Extras</h1>
+  <p>Somente horas extras — horas normais não entram no cálculo</p>
 </header>
 
 <div class="tabs">
@@ -223,6 +249,7 @@
         <input type="checkbox" id="pontoNotificar" onchange="alternarNotificacaoPonto()">
         <label for="pontoNotificar">🔔 Avisar quando começar/mudar hora extra</label>
       </div>
+      <div class="hint">Quando o horário normal terminar e começar a hora extra, o app pergunta "Você está de hora extra?". Sim = conta a partir do horário configurado; Não = esse período não é contado.</div>
       <div class="checkbox-row">
         <input type="checkbox" id="pontoNotificarFixa" onchange="alternarNotificacaoFixaPonto()">
         <label for="pontoNotificarFixa">📌 Notificação fixa com a contagem (aparece na tela bloqueada)</label>
@@ -263,16 +290,9 @@
     </div>
 
     <div class="card">
-      <h2>Horas trabalhadas</h2>
+      <h2>Adicional noturno (nas horas extras)</h2>
       <div class="field">
-        <label>Horas normais</label>
-        <div class="row">
-          <div class="field"><input type="number" id="horasNormaisH" min="0" step="1" placeholder="horas" inputmode="numeric"></div>
-          <div class="field"><input type="number" id="horasNormaisM" min="0" max="59" step="1" placeholder="min" inputmode="numeric"></div>
-        </div>
-      </div>
-      <div class="field">
-        <label>Horas com adicional noturno</label>
+        <label>Horas extras no período noturno</label>
         <div class="row">
           <div class="field"><input type="number" id="horasNoturnoH" min="0" step="1" placeholder="horas" inputmode="numeric"></div>
           <div class="field"><input type="number" id="horasNoturnoM" min="0" max="59" step="1" placeholder="min" inputmode="numeric"></div>
@@ -312,10 +332,11 @@
   <!-- SETTINGS -->
   <div id="tab-settings" class="hidden">
     <div class="card">
-      <h2>Salário base</h2>
+      <h2>Valor da hora</h2>
       <div class="field">
         <label>Valor da hora normal (R$)</label>
         <input type="number" id="salarioHora" step="0.01" inputmode="decimal">
+        <div class="hint">Usado só como base para calcular o valor das horas extras — as horas normais em si não são lançadas nem somadas.</div>
       </div>
     </div>
 
@@ -339,7 +360,7 @@
         <input type="checkbox" id="noturnoHoraReduzida">
         <label for="noturnoHoraReduzida">Aplicar hora reduzida (fictícia)</label>
       </div>
-      <div class="hint">Aplicado sobre o valor da hora normal, para o horário configurado. Padrão CLT: 22:00 às 05:00. Usado também pelo botão "Ponto" para preencher a hora com adicional noturno automaticamente.</div>
+      <div class="hint">Aplicado sobre o valor da hora normal, para o horário configurado. Padrão CLT: 22:00 às 05:00. Neste app o adicional noturno só conta nos minutos que são hora extra — hora normal à noite não entra.</div>
       <div class="hint">Hora reduzida: cada hora noturna trabalhada (52min30s) é contada como 1h remunerada — as horas de relógio do período noturno são multiplicadas por ≈1,1428 (60 ÷ 52,5) antes de calcular o adicional. Aplicado apenas pelo botão Ponto.</div>
     </div>
 
@@ -357,11 +378,10 @@
       </div>
       <div class="field">
         <label>Calcular sobre</label>
-        <select id="baseCalcPericulosidade" style="width:100%; background:#0f1e30; border:1px solid #2a4763; border-radius:8px; padding:10px 12px; color:#e8edf4; font-size:15px;">
-          <option value="base">Somente salário base (horas normais)</option>
-          <option value="base_he" selected>Salário base + horas extras</option>
+        <select id="baseCalcPericulosidade" class="hidden">
+          <option value="he" selected>Horas extras</option>
         </select>
-        <div class="hint">Aplicada por ciclo (16 a 15) através do botão "☣️ Aplicar periculosidade" na aba Histórico → Resumo, sobre o total de lançamentos daquele ciclo.</div>
+        <div class="hint">Calculada sobre o valor das horas extras. Aplicada por ciclo (16 a 15) através do botão "☣️ Aplicar periculosidade" na aba Histórico → Resumo, sobre o total de lançamentos daquele ciclo.</div>
       </div>
     </div>
 
@@ -439,7 +459,7 @@
       <div class="hint">"Seg 00-05h" é a madrugada de segunda-feira (00:00 às 05:00) — configure separado, já que esse período costuma seguir a regra de quem trabalhou no domingo, não a de segunda comum.</div>
       <div id="horariosPontoContainer"></div>
       <button class="add-tier" onclick="addFaixaHorario()">+ Adicionar faixa</button>
-      <div class="hint">Válido para todos os turnos. O turno usado em cada cálculo é escolhido no seletor "Turno" dentro do card Ponto, na aba Calcular (serve para identificar no histórico e para o aviso de turno errado). Percentual 0 = hora normal. As faixas de cada dia precisam cobrir as 24h, sem sobras.</div>
+      <div class="hint">Válido para todos os turnos. O turno usado em cada cálculo é escolhido no seletor "Turno" dentro do card Ponto, na aba Calcular (serve para identificar no histórico e para o aviso de turno errado). Percentual 0 = hora normal (não conta neste app). As faixas de cada dia precisam cobrir as 24h, sem sobras.</div>
     </div>
 
     <div class="card">
@@ -494,6 +514,7 @@
         ⬆️ Importar backup
         <input type="file" accept="application/json" style="display:none" onchange="importarBackup(event)">
       </label>
+      <div class="hint">Aceita também backups do app Horas &amp; Adicionais — as horas normais são removidas automaticamente.</div>
       <div class="hint">Exporta configurações e todo o histórico para um arquivo que você pode guardar (Drive, WhatsApp etc.) e importar depois — inclusive em outro aparelho.</div>
     </div>
 
@@ -502,11 +523,41 @@
 
 </div>
 
+<button id="vozFab" class="voz-fab" onclick="abrirVoz()" aria-label="Registrar por voz">🎤</button>
+<div id="vozOverlay" class="voz-overlay hidden" onclick="if (event.target === this) fecharVoz()">
+  <div class="voz-box">
+    <div id="vozStatus" class="voz-status">🎤 Ouvindo...</div>
+    <div id="vozTexto" class="voz-texto"></div>
+    <div id="vozResultado" class="voz-resultado"></div>
+    <div class="row" style="margin-top:12px; align-items:center;">
+      <input type="text" id="vozDigitado" placeholder="ou digite o comando aqui" style="flex:1; background:#0f1e30; border:1px solid #2a4763; border-radius:8px; padding:10px 12px; color:#e8edf4; font-size:14px;" onkeydown="if (event.key === 'Enter') enviarVozDigitado()">
+      <button class="btn-secondary" style="width:auto; margin-top:0; padding:10px 16px;" onclick="enviarVozDigitado()">OK</button>
+    </div>
+    <details class="voz-exemplos">
+      <summary>Exemplos do que falar</summary>
+      <ul>
+        <li><b>"Iniciar turno"</b> / <b>"Finalizar turno"</b> / <b>"Cancelar turno"</b></li>
+        <li><b>"Entrei às 15 e 26"</b> — começa o turno com essa entrada</li>
+        <li><b>"Saí às 3 da manhã"</b> — finaliza o turno em andamento e salva</li>
+        <li><b>"Ontem entrei às 15:26 e saí às 3 horas"</b> — calcula o dia pelos horários</li>
+        <li><b>"Das 6 às 14 sábado, segundo turno, feriado"</b></li>
+        <li><b>"Hoje 2 horas de 75% e 1 hora e meia de 100%"</b> — lançamento manual</li>
+        <li><b>"Dia 7, 40 minutos de 162,5% e salvar"</b> — "salvar" já grava no histórico</li>
+      </ul>
+    </details>
+    <div style="display:flex; gap:8px; margin-top:14px;">
+      <button class="btn-primary" style="flex:1; margin-top:0;" onclick="iniciarEscutaVoz()">🎤 Falar de novo</button>
+      <button class="btn-secondary" style="flex:1; margin-top:0;" onclick="fecharVoz()">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <div class="saved-toast" id="toast">Configurações salvas ✓</div>
 
 <script>
-const STORAGE_KEY = 'horasApp_config_v1';
-const CARDS_COLAPSADOS_KEY = 'horasApp_cardsColapsados_v1';
+const STORAGE_KEY = 'horasExtrasApp_config_v1';
+const REGISTROS_KEY = 'horasExtrasApp_registros_v1';
+const CARDS_COLAPSADOS_KEY = 'horasExtrasApp_cardsColapsados_v1';
 let cardsColapsados = {};
 
 function carregarEstadoCards() {
@@ -551,7 +602,6 @@ function inicializarCardsColapsaveis() {
   });
 }
 
-const REGISTROS_KEY = 'horasApp_registros_v1';
 let ultimoCalculo = null;
 let editandoId = null;
 let historicoView = 'resumo';
@@ -572,7 +622,7 @@ const defaultConfig = {
   noturnoFim: '05:00',
   noturnoHoraReduzida: true,
   pctPericulosidade: 30,
-  baseCalcPericulosidade: 'base_he',
+  baseCalcPericulosidade: 'he',
   intervalos: {
     almocoAtivo: true,
     almocoInicio: '12:00',
@@ -620,6 +670,23 @@ const defaultConfig = {
   }
 };
 
+const ORIGEM_CONFIG_KEY = 'horasApp_config_v1';
+const ORIGEM_REGISTROS_KEY = 'horasApp_registros_v1';
+const COPIADO_DA_ORIGEM_KEY = 'horasExtrasApp_copiadoOrigem_v1';
+let copiaPendenteDaOrigem = null;
+
+(function copiarDadosDoHorasAdicionais() {
+  try {
+    if (localStorage.getItem(COPIADO_DA_ORIGEM_KEY)) return;
+    localStorage.setItem(COPIADO_DA_ORIGEM_KEY, '1');
+    if (localStorage.getItem(STORAGE_KEY)) return;
+    const cfg = localStorage.getItem(ORIGEM_CONFIG_KEY);
+    if (cfg) localStorage.setItem(STORAGE_KEY, cfg);
+    const regs = localStorage.getItem(ORIGEM_REGISTROS_KEY);
+    if (regs && !localStorage.getItem(REGISTROS_KEY)) copiaPendenteDaOrigem = JSON.parse(regs);
+  } catch (e) {}
+})();
+
 let config = loadConfig();
 
 function loadConfig() {
@@ -664,6 +731,7 @@ function loadConfig() {
       if (!parsed.pontoVisor) parsed.pontoVisor = JSON.parse(JSON.stringify(defaultConfig.pontoVisor));
       if (!Array.isArray(parsed.feriados)) parsed.feriados = [];
       if (!parsed.intervalos) parsed.intervalos = JSON.parse(JSON.stringify(defaultConfig.intervalos));
+      parsed.baseCalcPericulosidade = 'he';
       return parsed;
     }
   } catch (e) {}
@@ -925,7 +993,7 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-const PONTO_KEY = 'horasApp_pontoAtivo_v1';
+const PONTO_KEY = 'horasExtrasApp_pontoAtivo_v1';
 let pontoInterval = null;
 
 // Classificação por dia da semana + horário do turno:
@@ -946,7 +1014,7 @@ function getTipoDia(date, forcarFeriado) {
   return 'semana';
 }
 
-const TURNO_PONTO_KEY = 'horasApp_turnoPontoSelecionado_v1';
+const TURNO_PONTO_KEY = 'horasExtrasApp_turnoPontoSelecionado_v1';
 
 function popularSelectTurno() {
   const select = document.getElementById('turnoPontoSelect');
@@ -1021,7 +1089,9 @@ function iniciarPonto() {
   const inicio = Date.now();
   const feriado = document.getElementById('pontoFeriado').checked;
   const turno = document.getElementById('turnoPontoSelect').value;
-  localStorage.setItem(PONTO_KEY, JSON.stringify({ inicio, feriado, turno }));
+  decisoesHE = {};
+  heRecusadaAgora = false;
+  localStorage.setItem(PONTO_KEY, JSON.stringify({ inicio, feriado, turno, decisoesHE: {} }));
   document.getElementById('pontoEntradaInput').value = paraDatetimeLocal(new Date(inicio));
   document.getElementById('pontoSaidaInput').value = '';
   ultimaCategoriaPonto = null;
@@ -1032,6 +1102,8 @@ function iniciarPonto() {
 function cancelarPonto() {
   if (!confirm('Cancelar o turno em andamento sem calcular as horas?')) return;
   localStorage.removeItem(PONTO_KEY);
+  decisoesHE = {};
+  heRecusadaAgora = false;
   atualizarUIPonto();
 }
 
@@ -1060,7 +1132,36 @@ function fmtHoraCurta(d) {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
-function segmentosDoTurno(inicioMs, fimMs, forcarFeriado, turnoId) {
+// Confirmação de hora extra: quando o turno passa de hora normal para hora extra,
+// o app pergunta "Você está de hora extra?". A resposta vale para o bloco inteiro
+// (até voltar a ser hora normal) e fica guardada pela hora em que o bloco começa.
+// decisoes[inicioDoBlocoMs] = true (conta) | false (não conta). Sem resposta = conta.
+let decisoesHE = {};
+let heRecusadaAgora = false;
+let perguntandoHE = false;
+
+function criarControleBlocosHE(decisoes) {
+  let anterior = null;
+  let bloco = null;
+  const pendentes = [];
+  return {
+    pendentes,
+    aplicar(chave, ms) {
+      if (chave === 'normal') { anterior = 'normal'; bloco = null; return chave; }
+      if (anterior === 'normal') {
+        bloco = ms;
+        if (!(decisoes && Object.prototype.hasOwnProperty.call(decisoes, String(ms)))) pendentes.push(ms);
+      }
+      anterior = chave;
+      if (bloco !== null && decisoes && decisoes[String(bloco)] === false) return 'recusada';
+      return chave;
+    },
+    recusadoAgora() { return bloco !== null && !!decisoes && decisoes[String(bloco)] === false; }
+  };
+}
+
+function segmentosDoTurno(inicioMs, fimMs, forcarFeriado, turnoId, decisoes) {
+  const blocos = criarControleBlocosHE(decisoes);
   const antecipada = forcarFeriado ? null : regraAntecipada(turnoId, inicioMs);
   const totalMinutos = Math.round((fimMs - inicioMs) / 60000);
   const segPrincipal = [];
@@ -1084,16 +1185,18 @@ function segmentosDoTurno(inicioMs, fimMs, forcarFeriado, turnoId) {
       if (noturnoAberto) { segNoturno.push({ inicio: inicioNoturnoAtual, fim: new Date(cursor) }); noturnoAberto = false; }
     } else {
       const c = classificarMinutoTurno(tipoDia, minutoDoDia, cursor.getTime(), antecipada);
-      const chave = c.cat === 'normal' ? 'normal' : `he${c.pct}`;
+      let chave = c.cat === 'normal' ? 'normal' : `he${c.pct}`;
+      chave = blocos.aplicar(chave, cursor.getTime());
+      if (chave === 'recusada') chave = 'normal';
       if (chave !== chaveAtual) {
         if (chaveAtual !== null) segPrincipal.push({ chave: chaveAtual, inicio: inicioAtual, fim: new Date(cursor) });
         chaveAtual = chave;
         inicioAtual = new Date(cursor);
       }
 
-      const dentroNoturno = noturnoIni <= noturnoFim
+      const dentroNoturno = chave !== 'normal' && (noturnoIni <= noturnoFim
         ? (minutoDoDia >= noturnoIni && minutoDoDia <= noturnoFim)
-        : (minutoDoDia >= noturnoIni || minutoDoDia <= noturnoFim);
+        : (minutoDoDia >= noturnoIni || minutoDoDia <= noturnoFim));
       if (dentroNoturno && !noturnoAberto) { noturnoAberto = true; inicioNoturnoAtual = new Date(cursor); }
       if (!dentroNoturno && noturnoAberto) { segNoturno.push({ inicio: inicioNoturnoAtual, fim: new Date(cursor) }); noturnoAberto = false; }
     }
@@ -1109,7 +1212,7 @@ function horariosDaLinha(l, r) {
   if (!r.pontoEntrada || !r.pontoSaida) return '';
   const inicioMs = new Date(r.pontoEntrada).getTime();
   const fimMs = new Date(r.pontoSaida).getTime();
-  const { segPrincipal, segNoturno } = segmentosDoTurno(inicioMs, fimMs, !!r.feriado, r.turno || 'turno1');
+  const { segPrincipal, segNoturno } = segmentosDoTurno(inicioMs, fimMs, !!r.feriado, r.turno || 'turno1', r.decisoesHE);
 
   let ranges = [];
   if (l.tipo === 'normal') {
@@ -1126,13 +1229,15 @@ function horariosDaLinha(l, r) {
   return ranges.map(s => `${fmtHoraCurta(s.inicio)}–${fmtHoraCurta(s.fim)}`).join(', ');
 }
 
-function classificarPeriodo(inicio, fim, forcarFeriado, turnoId) {
+function classificarPeriodo(inicio, fim, forcarFeriado, turnoId, decisoes) {
+  const blocos = criarControleBlocosHE(decisoes);
   const antecipada = forcarFeriado ? null : regraAntecipada(turnoId || turnoAtivoId(), inicio);
   const totalMinutos = Math.round((fim - inicio) / 60000);
   const buckets = {};
   let minutosNoturno = 0;
   let minutosIntervalo = 0;
-  if (totalMinutos <= 0) return { totalMinutos, buckets, minutosNoturno, minutosIntervalo };
+  let minutosRecusados = 0;
+  if (totalMinutos <= 0) return { totalMinutos, buckets, minutosNoturno, minutosIntervalo, minutosRecusados, pendentes: [], recusadoAgora: false };
 
   const noturnoIni = horaParaMinutos(config.noturnoInicio || defaultConfig.noturnoInicio);
   const noturnoFim = horaParaMinutos(config.noturnoFim || defaultConfig.noturnoFim);
@@ -1149,26 +1254,64 @@ function classificarPeriodo(inicio, fim, forcarFeriado, turnoId) {
     }
 
     const c = classificarMinutoTurno(tipoDia, minutoDoDia, cursor.getTime(), antecipada);
-    const chave = c.cat === 'normal' ? 'normal' : `he${c.pct}`;
+    let chave = c.cat === 'normal' ? 'normal' : `he${c.pct}`;
+    chave = blocos.aplicar(chave, cursor.getTime());
+    if (chave === 'recusada') { minutosRecusados++; chave = 'normal'; }
     buckets[chave] = (buckets[chave] || 0) + 1;
 
-    const dentroNoturno = noturnoIni <= noturnoFim
+    const dentroNoturno = chave !== 'normal' && (noturnoIni <= noturnoFim
       ? (minutoDoDia >= noturnoIni && minutoDoDia <= noturnoFim)
-      : (minutoDoDia >= noturnoIni || minutoDoDia <= noturnoFim);
+      : (minutoDoDia >= noturnoIni || minutoDoDia <= noturnoFim));
     if (dentroNoturno) minutosNoturno++;
 
     cursor.setMinutes(cursor.getMinutes() + 1);
   }
-  return { totalMinutos, buckets, minutosNoturno, minutosIntervalo };
+  return { totalMinutos, buckets, minutosNoturno, minutosIntervalo, minutosRecusados, pendentes: blocos.pendentes, recusadoAgora: blocos.recusadoAgora() };
 }
+
+function perguntarBlocosHE(pendentes) {
+  let mudou = false;
+  pendentes.forEach(ms => {
+    if (Object.prototype.hasOwnProperty.call(decisoesHE, String(ms))) return;
+    const hora = fmtHoraCurta(new Date(ms));
+    const data = new Date(ms);
+    const dataTxt = `${String(data.getDate()).padStart(2, '0')}/${String(data.getMonth() + 1).padStart(2, '0')}`;
+    const sim = confirm(`⏱️ Você está de hora extra?\n\nO horário normal acabou — a hora extra começa às ${hora} (${dataTxt}).\n\nOK / Sim = contar hora extra a partir das ${hora}.\nCancelar / Não = não contar esse período.`);
+    decisoesHE[String(ms)] = sim;
+    mudou = true;
+  });
+  return mudou;
+}
+
+function salvarDecisoesNoPonto() {
+  const raw = localStorage.getItem(PONTO_KEY);
+  if (!raw) return;
+  try {
+    const dados = JSON.parse(raw);
+    dados.decisoesHE = decisoesHE;
+    localStorage.setItem(PONTO_KEY, JSON.stringify(dados));
+  } catch (e) {}
+}
+
+function avisarHoraExtraPorNotificacao(ms) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const corpo = `A hora extra começa às ${fmtHoraCurta(new Date(ms))}. Abra o app para confirmar.`;
+  const tag = 'horas-extras-confirmar-' + ms;
+  if (swRegistrationPromise) {
+    swRegistrationPromise.then(reg => {
+      if (reg) reg.showNotification('⏱️ Você está de hora extra?', { body: corpo, tag, requireInteraction: true }).catch(() => {});
+      else { try { new Notification('⏱️ Você está de hora extra?', { body: corpo, tag }); } catch (e) {} }
+    });
+  } else {
+    try { new Notification('⏱️ Você está de hora extra?', { body: corpo, tag }); } catch (e) {}
+  }
+}
+
+const notificadosHE = {};
 
 function preencherCamposComBuckets(buckets, inicio, minutosNoturno) {
   const restantes = { ...buckets };
 
-  const horasNormaisCalc = (restantes['normal'] || 0) / 60;
-  const hmNormal = decimalParaHM(horasNormaisCalc);
-  document.getElementById('horasNormaisH').value = hmNormal.h;
-  document.getElementById('horasNormaisM').value = hmNormal.m;
   delete restantes['normal'];
 
   if (typeof minutosNoturno === 'number') {
@@ -1214,7 +1357,12 @@ function recalcularPonto(autoSalvar) {
 
   const inicio = new Date(entradaVal).getTime();
   const fim = new Date(saidaVal).getTime();
-  const { totalMinutos, buckets, minutosNoturno, minutosIntervalo } = classificarPeriodo(inicio, fim, forcarFeriado);
+  let res = classificarPeriodo(inicio, fim, forcarFeriado, undefined, decisoesHE);
+  if (res.pendentes.length > 0 && perguntarBlocosHE(res.pendentes)) {
+    salvarDecisoesNoPonto();
+    res = classificarPeriodo(inicio, fim, forcarFeriado, undefined, decisoesHE);
+  }
+  const { totalMinutos, buckets, minutosNoturno, minutosIntervalo, minutosRecusados } = res;
 
   if (totalMinutos <= 0) {
     alert('A saída precisa ser depois da entrada.');
@@ -1238,11 +1386,18 @@ function recalcularPonto(autoSalvar) {
     ? `\n\nEntrada antes das ${turnoAtual.inicioTipico}: ${fmtHM(minAnt / 60)} como HE ${regraAnt.pct}%.`
     : `\n\nTurno usado: ${turnoAtual.nome || turnoAtivoId()}.`;
 
+  const minutosHE = Object.keys(buckets).filter(k => k !== 'normal').reduce((s2, k) => s2 + buckets[k], 0);
+  const avisoHE = `\n\nHoras extras: ${fmtHM(minutosHE / 60)} (horas normais não contam).` +
+    (minutosRecusados > 0 ? `\n${fmtHM(minutosRecusados / 60)} de hora extra não confirmada (respondeu "Não") — não contada.` : '');
   if (autoSalvar) {
+    if (minutosHE <= 0) {
+      alert(`Turno finalizado: ${fmtHM(totalMinutos / 60)}, sem nenhuma hora extra — nada foi salvo no histórico.`);
+      return;
+    }
     salvarRegistro();
-    alert(`Turno finalizado: ${fmtHM(totalMinutos / 60)}.${avisoIntervalo}${avisoAntecipada}${aviso}\n\nJá salvo no histórico ✓`);
+    alert(`Turno finalizado: ${fmtHM(totalMinutos / 60)}.${avisoHE}${avisoIntervalo}${avisoAntecipada}${aviso}\n\nJá salvo no histórico ✓`);
   } else {
-    alert(`${fmtHM(totalMinutos / 60)} classificadas automaticamente.${avisoIntervalo}${avisoAntecipada}${aviso}\n\nConfira o detalhamento abaixo.`);
+    alert(`${fmtHM(totalMinutos / 60)} classificadas automaticamente.${avisoHE}${avisoIntervalo}${avisoAntecipada}${aviso}\n\nConfira o detalhamento abaixo.`);
   }
 }
 
@@ -1251,7 +1406,21 @@ function atualizarCalculoAoVivo(inicio) {
   const agora = Date.now();
   document.getElementById('pontoSaidaInput').value = paraDatetimeLocal(new Date(agora));
 
-  const { totalMinutos, buckets, minutosNoturno } = classificarPeriodo(inicio, agora, forcarFeriado);
+  let res = classificarPeriodo(inicio, agora, forcarFeriado, undefined, decisoesHE);
+  if (res.pendentes.length > 0 && !perguntandoHE) {
+    res.pendentes.forEach(ms => {
+      if (!notificadosHE[ms]) { notificadosHE[ms] = true; avisarHoraExtraPorNotificacao(ms); }
+    });
+    perguntandoHE = true;
+    const mudou = perguntarBlocosHE(res.pendentes);
+    perguntandoHE = false;
+    if (mudou) {
+      salvarDecisoesNoPonto();
+      res = classificarPeriodo(inicio, Date.now(), forcarFeriado, undefined, decisoesHE);
+    }
+  }
+  heRecusadaAgora = res.recusadoAgora;
+  const { totalMinutos, buckets, minutosNoturno } = res;
   if (totalMinutos <= 0) return;
 
   preencherCamposComBuckets(buckets, inicio, minutosNoturno);
@@ -1262,9 +1431,9 @@ function atualizarCalculoAoVivo(inicio) {
   if (valorLive && totalGeral) valorLive.textContent = totalGeral.textContent;
 }
 
-const PONTO_NOTIFICAR_KEY = 'horasApp_pontoNotificar_v1';
-const PONTO_NOTIFICAR_FIXA_KEY = 'horasApp_pontoNotificarFixa_v1';
-const PONTO_NOTIFICACAO_FIXA_TAG = 'horas-adicionais-ponto-fixa';
+const PONTO_NOTIFICAR_KEY = 'horasExtrasApp_pontoNotificar_v1';
+const PONTO_NOTIFICAR_FIXA_KEY = 'horasExtrasApp_pontoNotificarFixa_v1';
+const PONTO_NOTIFICACAO_FIXA_TAG = 'horas-extras-ponto-fixa';
 let ultimaCategoriaPonto = null;
 let primeiraChecagemPonto = true;
 let notificacaoFixaAtiva = false;
@@ -1374,7 +1543,9 @@ function categoriaAgora(forcarFeriado) {
   }
 
   const c = classificarMinuto(tipoDia, minutoDoDia);
-  let categoria = c.cat === 'normal' ? 'Hora normal' : `Hora extra ${c.pct}%`;
+  if (c.cat === 'normal') return 'Hora normal (não conta)';
+  if (heRecusadaAgora) return 'Hora extra não confirmada (não conta)';
+  let categoria = `Hora extra ${c.pct}%`;
 
   const noturnoIni = horaParaMinutos(config.noturnoInicio || defaultConfig.noturnoInicio);
   const noturnoFim = horaParaMinutos(config.noturnoFim || defaultConfig.noturnoFim);
@@ -1395,7 +1566,7 @@ function checarMudancaCategoria(forcarFeriado) {
     const mensagem = `Mudou de "${ultimaCategoriaPonto}" para "${categoriaAtual}"`;
     const notificarLigado = localStorage.getItem(PONTO_NOTIFICAR_KEY) === '1';
     if (notificarLigado && 'Notification' in window && Notification.permission === 'granted') {
-      new Notification('⏱️ Horas & Adicionais', { body: mensagem });
+      new Notification('⏱️ Horas Extras', { body: mensagem });
     }
   }
   ultimaCategoriaPonto = categoriaAtual;
@@ -1412,6 +1583,7 @@ function atualizarUIPonto() {
 
   if (raw) {
     const dados = JSON.parse(raw);
+    if (dados.decisoesHE) decisoesHE = { ...dados.decisoesHE, ...decisoesHE };
     document.getElementById('pontoBotoesInativo').classList.add('hidden');
     document.getElementById('pontoBotoesAtivo').classList.remove('hidden');
     document.getElementById('pontoElapsedWrap').classList.remove('hidden');
@@ -1499,16 +1671,11 @@ function fmtHM(decimal) {
 }
 
 function calcular() {
-  const horasNormais = hmParaDecimal(
-    document.getElementById('horasNormaisH').value,
-    document.getElementById('horasNormaisM').value
-  );
   const horasNoturno = hmParaDecimal(
     document.getElementById('horasNoturnoH').value,
     document.getElementById('horasNoturnoM').value
   );
 
-  const valorNormal = horasNormais * config.salarioHora;
   const valorNoturno = horasNoturno * config.salarioHora * (config.pctNoturno / 100);
 
   let totalHE = 0;
@@ -1524,7 +1691,7 @@ function calcular() {
     if (horas > 0) heLines.push({ nome: tier.nome, horas, valor });
   });
 
-  const total = valorNormal + valorNoturno + totalHE;
+  const total = valorNoturno + totalHE;
 
   const linesEl = document.getElementById('resultLines');
   linesEl.innerHTML = '';
@@ -1539,9 +1706,6 @@ function calcular() {
     linesEl.appendChild(div);
   }
 
-  if (horasNormais > 0) {
-    addLine('Salário horista', `${fmtHM(horasNormais)} × R$ ${fmt(config.salarioHora)}`, valorNormal);
-  }
   if (horasNoturno > 0) {
     addLine('Adicional noturno', `${fmtHM(horasNoturno)} × ${config.pctNoturno}%`, valorNoturno);
   }
@@ -1561,7 +1725,6 @@ function calcular() {
   document.getElementById('resultados').classList.remove('hidden');
 
   const linhas = [];
-  linhas.push({ nome: 'Salário horista', horas: horasNormais, valor: valorNormal, tipo: 'normal' });
   if (horasNoturno > 0) linhas.push({ nome: 'Adicional noturno', horas: horasNoturno, valor: valorNoturno, tipo: 'noturno' });
   heLines.forEach(l => linhas.push({ nome: l.nome, horas: l.horas, valor: l.valor, tipo: 'he' }));
 
@@ -1586,6 +1749,7 @@ function calcular() {
   if (pontoEntradaVal && pontoSaidaVal) {
     ultimoCalculo.pontoEntrada = pontoEntradaVal;
     ultimoCalculo.pontoSaida = pontoSaidaVal;
+    ultimoCalculo.decisoesHE = { ...decisoesHE };
   }
 }
 
@@ -1613,6 +1777,7 @@ function salvarRegistro() {
     document.getElementById('pontoEntradaInput').value = '';
     document.getElementById('pontoSaidaInput').value = '';
   }
+  if (!localStorage.getItem(PONTO_KEY)) decisoesHE = {};
 
   localStorage.setItem(REGISTROS_KEY, JSON.stringify(registros));
   renderHistorico();
@@ -1637,6 +1802,7 @@ function editarRegistro(id) {
   if (!r) return;
 
   editandoId = id;
+  decisoesHE = { ...(r.decisoesHE || {}) };
 
   const selectTurno = document.getElementById('turnoPontoSelect');
   if (selectTurno && r.turno && (config.turnos || defaultConfig.turnos)[r.turno]) {
@@ -1646,10 +1812,6 @@ function editarRegistro(id) {
   document.getElementById('dataRegistro').value = r.data || '';
   atualizarDiaSemana();
 
-  const linhaNormal = r.linhas.find(l => l.tipo === 'normal');
-  const hmNormal = decimalParaHM(linhaNormal ? linhaNormal.horas : 0);
-  document.getElementById('horasNormaisH').value = linhaNormal ? hmNormal.h : '';
-  document.getElementById('horasNormaisM').value = linhaNormal ? hmNormal.m : '';
 
   const linhaNoturno = r.linhas.find(l => l.tipo === 'noturno');
   const hmNoturno = decimalParaHM(linhaNoturno ? linhaNoturno.horas : 0);
@@ -1686,6 +1848,7 @@ function editarRegistro(id) {
 
 function cancelarEdicao() {
   editandoId = null;
+  decisoesHE = {};
   document.getElementById('avisoEdicao').classList.add('hidden');
   document.getElementById('pontoEntradaInput').value = '';
   document.getElementById('pontoSaidaInput').value = '';
@@ -1792,15 +1955,15 @@ function aplicarPericulosidadeCiclo(chave) {
     });
   });
 
-  const base = config.baseCalcPericulosidade === 'base_he' ? baseSalario + baseHE : baseSalario;
+  const base = baseHE;
   const valor = base * (config.pctPericulosidade / 100);
 
   if (valor <= 0) {
-    alert('Não há valores lançados nesse ciclo para calcular a periculosidade.');
+    alert('Não há horas extras lançadas nesse ciclo para calcular a periculosidade.');
     return;
   }
 
-  if (!confirm(`Aplicar periculosidade de ${config.pctPericulosidade}% sobre ${config.baseCalcPericulosidade === 'base_he' ? 'base + horas extras' : 'base'} deste ciclo?\n\nValor: R$ ${fmt(valor)}`)) return;
+  if (!confirm(`Aplicar periculosidade de ${config.pctPericulosidade}% sobre as horas extras deste ciclo?\n\nValor: R$ ${fmt(valor)}`)) return;
 
   registros = registros.filter(r => !(r.ciclo === chave && r.periculosidadeCiclo));
 
@@ -1954,10 +2117,10 @@ function recalcularCiclo(chave) {
     if (r.pontoEntrada && r.pontoSaida) {
       const ini = new Date(r.pontoEntrada).getTime();
       const fim = new Date(r.pontoSaida).getTime();
-      const res = classificarPeriodo(ini, fim, !!r.feriado, r.turno || 'turno1');
+      const res = classificarPeriodo(ini, fim, !!r.feriado, r.turno || 'turno1', r.decisoesHE);
       if (res.totalMinutos > 0) {
         const fator = config.noturnoHoraReduzida ? (60 / 52.5) : 1;
-        const novas = [{ nome: 'Salário horista', horas: (res.buckets['normal'] || 0) / 60, valor: 0, tipo: 'normal' }];
+        const novas = [];
         const horasNot = (res.minutosNoturno / 60) * fator;
         if (horasNot > 0) novas.push({ nome: 'Adicional noturno', horas: horasNot, valor: 0, tipo: 'noturno' });
         (config.tiers || []).forEach(t => {
@@ -1970,6 +2133,7 @@ function recalcularCiclo(chave) {
       }
     }
 
+    r.linhas = r.linhas.filter(l => l.tipo !== 'normal');
     let totalRegistro = 0;
     r.linhas.forEach(l => {
       if (l.tipo === 'normal') {
@@ -2023,16 +2187,12 @@ function renderHistorico() {
       const subtotal = entradas.reduce((s, r) => s + r.total, 0);
       const horasExtrasCiclo = entradas.reduce((s, r) => s + (r.horasExtrasTotal || 0), 0);
 
-      let horasNormaisCiclo = 0, valorNormaisCiclo = 0;
       let horasNoturnoCiclo = 0, valorNoturnoCiclo = 0;
       const porFaixaHoras = {};
       const porFaixaValor = {};
       entradas.forEach(r => {
         r.linhas.forEach(l => {
-          if (l.tipo === 'normal') {
-            horasNormaisCiclo += l.horas;
-            valorNormaisCiclo += l.valor;
-          } else if (l.tipo === 'noturno') {
+          if (l.tipo === 'noturno') {
             horasNoturnoCiclo += l.horas;
             valorNoturnoCiclo += l.valor;
           } else if (l.tipo === 'he') {
@@ -2056,7 +2216,6 @@ function renderHistorico() {
       `;
 
       const normaisNoturnoHtml =
-        (horasNormaisCiclo > 0 ? linhaResumo('Horas normais', horasNormaisCiclo, valorNormaisCiclo) : '') +
         (horasNoturnoCiclo > 0 ? linhaResumo('Adicional noturno', horasNoturnoCiclo, valorNoturnoCiclo) : '');
 
       const faixasHtml = faixasOrdenadas.map(nome => linhaResumo(nome, porFaixaHoras[nome], porFaixaValor[nome])).join('') + (faixasOrdenadas.length > 0 ? `
@@ -2195,11 +2354,32 @@ function exportarBackup() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `horas-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  a.download = `horas-extras-backup-${new Date().toISOString().slice(0, 10)}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+// Converte lançamentos do Horas & Adicionais: tira as horas normais e, quando o dia
+// tem entrada/saída do Ponto, recalcula o adicional noturno só nos minutos de HE.
+// Periculosidade/DSR do ciclo são descartados (os valores mudaram) — reaplique pelos botões.
+function converterRegistrosOrigem(lista) {
+  const fator = config.noturnoHoraReduzida ? (60 / 52.5) : 1;
+  return (lista || []).filter(r => !r.periculosidadeCiclo && !r.dsrCiclo).map(r => {
+    const novo = { ...r, linhas: (r.linhas || []).filter(l => l.tipo !== 'normal').map(l => ({ ...l })) };
+    if (r.pontoEntrada && r.pontoSaida) {
+      const res = classificarPeriodo(new Date(r.pontoEntrada).getTime(), new Date(r.pontoSaida).getTime(), !!r.feriado, r.turno || 'turno1');
+      const horasNot = (res.minutosNoturno / 60) * fator;
+      novo.linhas = novo.linhas.filter(l => l.tipo !== 'noturno');
+      if (horasNot > 0) {
+        novo.linhas.unshift({ nome: 'Adicional noturno', horas: horasNot, valor: horasNot * config.salarioHora * (config.pctNoturno / 100), tipo: 'noturno' });
+      }
+    }
+    novo.total = novo.linhas.reduce((s2, l) => s2 + (l.valor || 0), 0);
+    novo.horasExtrasTotal = novo.linhas.filter(l => l.tipo === 'he').reduce((s2, l) => s2 + (l.horas || 0), 0);
+    return novo;
+  }).filter(r => r.linhas.length > 0);
 }
 
 function importarBackup(event) {
@@ -2217,7 +2397,7 @@ function importarBackup(event) {
         renderTiersCalc();
       }
       if (Array.isArray(dados.registros)) {
-        localStorage.setItem(REGISTROS_KEY, JSON.stringify(dados.registros));
+        localStorage.setItem(REGISTROS_KEY, JSON.stringify(converterRegistrosOrigem(dados.registros)));
         renderHistorico();
       }
       alert('Backup importado com sucesso!');
@@ -2227,6 +2407,442 @@ function importarBackup(event) {
   };
   reader.readAsText(file);
   event.target.value = '';
+}
+
+// ===================== REGISTRO POR VOZ =====================
+// Usa o reconhecimento de voz do próprio Chrome (pt-BR). O texto falado é
+// interpretado por regras simples: iniciar/finalizar/cancelar turno, horários de
+// entrada e saída, ou um lançamento manual ("2 horas de 75%").
+const VozRecog = window.SpeechRecognition || window.webkitSpeechRecognition;
+let vozRec = null;
+let vozOuvindo = false;
+
+const VOZ_NUMEROS = {
+  zero: 0, um: 1, uma: 1, dois: 2, duas: 2, tres: 3, quatro: 4, cinco: 5, seis: 6, sete: 7, oito: 8, nove: 9,
+  dez: 10, onze: 11, doze: 12, treze: 13, quatorze: 14, catorze: 14, quinze: 15, dezesseis: 16, dezasseis: 16,
+  dezessete: 17, dezoito: 18, dezenove: 19, vinte: 20, trinta: 30, quarenta: 40, cinquenta: 50, sessenta: 60,
+  setenta: 70, oitenta: 80, noventa: 90, cem: 100, cento: 100, duzentos: 200
+};
+const VOZ_MESES = ['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const VOZ_DIAS_SEMANA = ['domingo','segunda','terca','quarta','quinta','sexta','sabado'];
+
+function vozSemAcento(t) { return t.normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+
+function vozNormalizar(texto) {
+  let t = vozSemAcento(String(texto || '').toLowerCase());
+  t = t.replace(/meia[\s-]?noite/g, ' 0:00 ').replace(/meio[\s-]?dia/g, ' 12:00 ');
+  t = t.replace(/(\d),(\d)/g, '$1.$2');
+  t = t.replace(/por\s*cento/g, '%');
+  t = t.replace(/(\d)\s*(?:o|º|°)\s+turno/g, '$1 turno');
+  t = t.replace(/[^a-z0-9\s:.%]/g, ' ').replace(/\.(?!\d)/g, ' ');
+  const tokens = t.split(/\s+/).filter(Boolean);
+  const out = [];
+  for (let i = 0; i < tokens.length; i++) {
+    if (Object.prototype.hasOwnProperty.call(VOZ_NUMEROS, tokens[i])) {
+      let total = VOZ_NUMEROS[tokens[i]], ultimo = total, j = i;
+      while (tokens[j + 1] === 'e' && Object.prototype.hasOwnProperty.call(VOZ_NUMEROS, tokens[j + 2])) {
+        const prox = VOZ_NUMEROS[tokens[j + 2]];
+        const ok = (ultimo >= 100 && ultimo % 100 === 0 && prox < 100) ||
+                   (ultimo >= 20 && ultimo < 100 && ultimo % 10 === 0 && prox > 0 && prox < 10);
+        if (!ok) break;
+        total += prox; ultimo = prox; j += 2;
+      }
+      out.push(String(total));
+      i = j;
+    } else {
+      out.push(tokens[i]);
+    }
+  }
+  t = ' ' + out.join(' ') + ' ';
+  t = t.replace(/(\d+) e meio\b/g, '$1.5');
+  t = t.replace(/\be meia\b/g, 'e 30');
+  t = t.replace(/(\d)\s+%/g, '$1%');
+  t = t.replace(/\b(?:primeiro|1)\s+turno\b/g, ' turno1 ')
+       .replace(/\b(?:segundo|2)\s+turno\b/g, ' turno2 ')
+       .replace(/\b(?:terceiro|3)\s+turno\b/g, ' turno3 ');
+  return t.replace(/\s+/g, ' ');
+}
+
+function vozHojeZero() { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }
+
+function vozDataBase(t) {
+  const hoje = vozHojeZero();
+  let d = null;
+  if (/\banteontem\b/.test(t)) { d = new Date(hoje); d.setDate(d.getDate() - 2); }
+  else if (/\bontem\b/.test(t)) { d = new Date(hoje); d.setDate(d.getDate() - 1); }
+  else if (/\bhoje\b/.test(t)) { d = new Date(hoje); }
+
+  const m = t.match(new RegExp('\\bdia (\\d{1,2})(?:\\s+(?:de\\s+)?(' + VOZ_MESES.join('|') + ')|\\s*/\\s*(\\d{1,2}))?'));
+  if (m) {
+    const dia = parseInt(m[1]);
+    let mes = hoje.getMonth(), ano = hoje.getFullYear(), mesDito = false;
+    if (m[2]) { mes = VOZ_MESES.indexOf(m[2]); mesDito = true; }
+    else if (m[3] && parseInt(m[3]) >= 1 && parseInt(m[3]) <= 12) { mes = parseInt(m[3]) - 1; mesDito = true; }
+    let cand = new Date(ano, mes, dia);
+    if (cand > hoje) {
+      if (mesDito) cand = new Date(ano - 1, mes, dia);
+      else cand = new Date(ano, mes - 1, dia);
+    }
+    if (dia >= 1 && dia <= 31) d = cand;
+  } else if (!d) {
+    const w = t.match(/\b(domingo|segunda|terca|quarta|quinta|sexta|sabado)\b/);
+    if (w) {
+      const alvo = VOZ_DIAS_SEMANA.indexOf(w[1]);
+      d = new Date(hoje);
+      while (d.getDay() !== alvo) d.setDate(d.getDate() - 1);
+    }
+  }
+  return { data: d || hoje, explicita: !!d };
+}
+
+function vozDataStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+const VOZ_ANCORAS_ENTRADA = ['entrei', 'entrada', 'cheguei', 'comecei', 'iniciei', 'inicio', 'das'];
+const VOZ_ANCORAS_SAIDA = ['sai', 'saida', 'terminei', 'finalizei', 'larguei', 'encerrei', 'parei', 'ate'];
+const VOZ_RE_ENTRADA = /\b(entrei|entrada|cheguei|comecei|iniciei|inicio|iniciar|inicia|comecar|comeca)\b/g;
+const VOZ_RE_SAIDA = /\b(sai|saida|terminei|finalizei|larguei|encerrei|parei|embora|finaliza|finalizar|encerra|encerrar|termina|terminar)\b/g;
+
+function vozUltimoIndice(re, texto) {
+  let ultimo = -1, m;
+  re.lastIndex = 0;
+  while ((m = re.exec(texto)) !== null) ultimo = m.index;
+  return ultimo;
+}
+
+function vozExtrairHorarios(t) {
+  const re = /(?:^|\s)(entrei|entrada|cheguei|comecei|iniciei|inicio|sai|saida|terminei|finalizei|larguei|encerrei|parei|as|a|das|de|ate|ao)\s+(?:(?:as|a|das)\s+)?(\d{1,2})(?:\s*(?::|h)\s*(\d{1,2})\b|(?:\s*(?:horas?|hrs?|h)\b)?(?:\s+e\s+(\d{1,2})(?:\s*min(?:utos?)?)?)?)(?:\s+(da manha|da tarde|da noite|da madrugada))?(?!\s*%|\d|\.\d)/g;
+  const lista = [];
+  let m;
+  while ((m = re.exec(t)) !== null) {
+    let h = parseInt(m[2]);
+    const min = parseInt(m[3] || m[4] || '0');
+    const periodo = m[5] || '';
+    if ((periodo === 'da tarde' && h < 12) || (periodo === 'da noite' && h >= 6 && h < 12)) h += 12;
+    if ((periodo === 'da manha' || periodo === 'da madrugada') && h === 12) h = 0;
+    if (h > 23 || min > 59) continue;
+
+    const ancora = m[1];
+    let papel = null;
+    if (VOZ_ANCORAS_ENTRADA.includes(ancora)) papel = 'entrada';
+    else if (VOZ_ANCORAS_SAIDA.includes(ancora)) papel = 'saida';
+    else {
+      const antes = t.slice(0, m.index + 1);
+      const ie = vozUltimoIndice(VOZ_RE_ENTRADA, antes);
+      const is = vozUltimoIndice(VOZ_RE_SAIDA, antes);
+      if (is > ie) papel = 'saida';
+      else if (ie > is) papel = 'entrada';
+    }
+    lista.push({ h, min, papel });
+  }
+  let entrada = lista.find(x => x.papel === 'entrada') || null;
+  let saida = lista.find(x => x.papel === 'saida') || null;
+  lista.filter(x => !x.papel).forEach(x => {
+    if (!entrada) entrada = x;
+    else if (!saida) saida = x;
+  });
+  return { entrada, saida };
+}
+
+function vozHoraTxt(x) { return `${String(x.h).padStart(2, '0')}:${String(x.min).padStart(2, '0')}`; }
+
+function vozIrParaCalcular() {
+  const tab = document.querySelector('.tab[data-tab="calc"]');
+  if (tab && !tab.classList.contains('active')) tab.click();
+}
+
+function vozTurnoAtivo() {
+  try { return JSON.parse(localStorage.getItem(PONTO_KEY) || 'null'); } catch (e) { return null; }
+}
+
+function vozDataHora(base, x) {
+  const d = new Date(base);
+  d.setHours(x.h, x.min, 0, 0);
+  return d;
+}
+
+function interpretarComandoVoz(textoOriginal) {
+  const t = vozNormalizar(textoOriginal);
+  const ativo = vozTurnoAtivo();
+  const querSalvar = /\b(salva|salvar|salve|grava|gravar|grave)\b/.test(t);
+  const ajustes = [];
+  const preparar = [];
+
+  // Turno e feriado ditos na frase
+  const turnoDito = (t.match(/\bturno([123])\b/) || [])[1];
+  if (turnoDito) {
+    const id = 'turno' + turnoDito;
+    const turnos = config.turnos || defaultConfig.turnos;
+    if (turnos[id] && !ativo) {
+      preparar.push(() => {
+        const sel = document.getElementById('turnoPontoSelect');
+        sel.value = id;
+        salvarTurnoPontoSelecionado();
+      });
+      ajustes.push(turnos[id].nome || id);
+    }
+  }
+  const feriado = /\bferiado\b/.test(t);
+  if (feriado && !ativo) {
+    preparar.push(() => { document.getElementById('pontoFeriado').checked = true; });
+    ajustes.push('feriado');
+  }
+  const extra = ajustes.length ? ` (${ajustes.join(', ')})` : '';
+  const comPreparo = fn => () => { preparar.forEach(p => p()); fn(); };
+
+  // Cancelar
+  if (/\bcancel/.test(t)) {
+    if (!ativo) return { erro: 'Não há turno em andamento para cancelar.' };
+    return { resumo: 'Cancelar o turno em andamento', acao: () => cancelarPonto() };
+  }
+
+  // Lançamento manual: "2 horas de 75%", "40 minutos de 100%"
+  if (/\b\d+(?:\.\d+)?%/.test(t)) {
+    const { data } = vozDataBase(t);
+    const reHE = /\b(\d+(?:\.\d+)?)(?:\s*:\s*(\d{1,2}))?\s*(horas?|hrs?|h|minutos?|min)?(?:\s+e\s+(\d{1,2})\s*(?:minutos?|min)?)?\s*(?:de\s+)?(?:horas?\s+)?(?:extras?\s*)?(?:de|a|com)?\s*\b(\d+(?:\.\d+)?)%/g;
+    const porTier = {};
+    const semFaixa = [];
+    let m;
+    while ((m = reHE.exec(t)) !== null) {
+      const num = parseFloat(m[1]);
+      const unidade = m[3] || '';
+      let horas = /^min/.test(unidade) ? num / 60 : num + (parseInt(m[2] || m[4] || '0') / 60);
+      const pct = parseFloat(m[5]);
+      const idx = (config.tiers || []).findIndex(tr => Math.abs(tr.pct - pct) < 0.01);
+      if (idx === -1) { semFaixa.push(pct + '%'); continue; }
+      if (horas > 0) porTier[idx] = (porTier[idx] || 0) + horas;
+    }
+    let noturno = null;
+    const mn = t.match(/\b(\d+(?:\.\d+)?)(?:\s*:\s*(\d{1,2}))?\s*(horas?|hrs?|h|minutos?|min)?(?:\s+e\s+(\d{1,2})\s*(?:minutos?|min)?)?\s*(?:de\s+)?(?:adicional\s+)?noturn[oa]/);
+    if (mn) {
+      const num = parseFloat(mn[1]);
+      noturno = /^min/.test(mn[3] || '') ? num / 60 : num + (parseInt(mn[2] || mn[4] || '0') / 60);
+    }
+    if (Object.keys(porTier).length === 0) {
+      return { erro: semFaixa.length
+        ? `Não existe faixa de hora extra de ${semFaixa.join(', ')} em Configurações.`
+        : 'Não entendi as horas. Ex.: "2 horas de 75%".' };
+    }
+    const partes = Object.keys(porTier).map(i => `${fmtHM(porTier[i])} de ${String(config.tiers[i].pct).replace('.', ',')}%`);
+    if (noturno) partes.push(`${fmtHM(noturno)} de adicional noturno`);
+    let resumo = `${formatarData(vozDataStr(data))}: ${partes.join(' + ')}`;
+    if (semFaixa.length) resumo += `\n(sem faixa configurada: ${semFaixa.join(', ')})`;
+    if (querSalvar) resumo += ' · salvo no histórico';
+    return {
+      resumo,
+      acao: () => {
+        vozIrParaCalcular();
+        document.getElementById('dataRegistro').value = vozDataStr(data);
+        atualizarDiaSemana();
+        if (!ativo) {
+          document.getElementById('pontoEntradaInput').value = '';
+          document.getElementById('pontoSaidaInput').value = '';
+        }
+        document.querySelectorAll('.calc-tier-input-h').forEach(inputH => {
+          const idx = parseInt(inputH.dataset.index);
+          const inputM = document.querySelector(`.calc-tier-input-m[data-index="${idx}"]`);
+          const hm = decimalParaHM(porTier[idx] || 0);
+          inputH.value = porTier[idx] ? hm.h : '';
+          if (inputM) inputM.value = porTier[idx] ? hm.m : '';
+        });
+        const hmN = decimalParaHM(noturno || 0);
+        document.getElementById('horasNoturnoH').value = noturno ? hmN.h : '';
+        document.getElementById('horasNoturnoM').value = noturno ? hmN.m : '';
+        calcular();
+        if (querSalvar) salvarRegistro();
+        else document.getElementById('resultados').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    };
+  }
+
+  // Horários de entrada / saída
+  const { entrada, saida } = vozExtrairHorarios(t);
+  const { data: base, explicita } = vozDataBase(t);
+  const agora = Date.now();
+
+  if (entrada && saida) {
+    let ini = vozDataHora(base, entrada);
+    if (!explicita && ini.getTime() > agora + 5 * 60000) ini.setDate(ini.getDate() - 1);
+    const fim = vozDataHora(ini, saida);
+    if (fim <= ini) fim.setDate(fim.getDate() + 1);
+    const salvar = querSalvar || !!ativo;
+    return {
+      resumo: `Entrada ${formatarData(vozDataStr(ini))} ${vozHoraTxt(entrada)} · saída ${vozHoraTxt(saida)}${extra}${salvar ? ' · salvo no histórico' : ''}`,
+      acao: comPreparo(() => {
+        vozIrParaCalcular();
+        if (ativo) { localStorage.removeItem(PONTO_KEY); atualizarUIPonto(); }
+        document.getElementById('pontoEntradaInput').value = paraDatetimeLocal(ini);
+        document.getElementById('pontoSaidaInput').value = paraDatetimeLocal(fim);
+        recalcularPonto(salvar);
+      })
+    };
+  }
+
+  if (saida && !entrada) {
+    const entradaVal = document.getElementById('pontoEntradaInput').value;
+    const iniMs = ativo ? (entradaVal ? new Date(entradaVal).getTime() : ativo.inicio) : (entradaVal ? new Date(entradaVal).getTime() : null);
+    if (!iniMs) return { erro: 'Diga também o horário de entrada. Ex.: "entrei às 15:26 e saí às 3".' };
+    const ini = new Date(iniMs);
+    const fim = vozDataHora(ini, saida);
+    if (fim <= ini) fim.setDate(fim.getDate() + 1);
+    const salvar = querSalvar || !!ativo;
+    return {
+      resumo: `Saída às ${vozHoraTxt(saida)}${ativo ? ' — turno finalizado' : ''}${salvar ? ' · salvo no histórico' : ''}`,
+      acao: comPreparo(() => {
+        vozIrParaCalcular();
+        if (ativo) { localStorage.removeItem(PONTO_KEY); atualizarUIPonto(); }
+        document.getElementById('pontoEntradaInput').value = paraDatetimeLocal(ini);
+        document.getElementById('pontoSaidaInput').value = paraDatetimeLocal(fim);
+        recalcularPonto(salvar);
+      })
+    };
+  }
+
+  if (entrada && !saida) {
+    const ini = vozDataHora(base, entrada);
+    if (!explicita && ini.getTime() > agora + 5 * 60000) ini.setDate(ini.getDate() - 1);
+    if (ativo) {
+      return {
+        resumo: `Entrada do turno ajustada para ${vozHoraTxt(entrada)}`,
+        acao: () => {
+          vozIrParaCalcular();
+          document.getElementById('pontoEntradaInput').value = paraDatetimeLocal(ini);
+          pontoEntradaAlterada();
+        }
+      };
+    }
+    return {
+      resumo: `Turno iniciado com entrada às ${vozHoraTxt(entrada)}${extra}`,
+      acao: comPreparo(() => {
+        vozIrParaCalcular();
+        iniciarPonto();
+        document.getElementById('pontoEntradaInput').value = paraDatetimeLocal(ini);
+        const dados = vozTurnoAtivo();
+        if (dados) { dados.inicio = ini.getTime(); localStorage.setItem(PONTO_KEY, JSON.stringify(dados)); }
+        atualizarUIPonto();
+      })
+    };
+  }
+
+  // Sem horário: iniciar / finalizar agora
+  if (/\b(finaliza|finalizar|finalizei|encerra|encerrar|encerrei|termina|terminar|terminei|sai|saida|parar|parei|embora|larguei)\b/.test(t)) {
+    if (!ativo) return { erro: 'Não há turno em andamento. Para lançar um dia, diga a entrada e a saída: "entrei às 15:26 e saí às 3".' };
+    return { resumo: 'Turno finalizado agora', acao: () => { vozIrParaCalcular(); finalizarPonto(); } };
+  }
+  if (/\b(inicia|iniciar|iniciei|inicio|comeca|comecar|comecei|entrei|entrada|cheguei|bater ponto|bati ponto|liga|ligar)\b/.test(t)) {
+    if (ativo) return { erro: 'Já existe um turno em andamento.' };
+    return { resumo: `Turno iniciado agora${extra}`, acao: comPreparo(() => { vozIrParaCalcular(); iniciarPonto(); }) };
+  }
+
+  return { erro: 'Não entendi o comando. Veja os exemplos abaixo.' };
+}
+
+function vozDefinirStatus(status, texto, resultado, erro) {
+  if (status !== undefined) document.getElementById('vozStatus').textContent = status;
+  if (texto !== undefined) document.getElementById('vozTexto').textContent = texto;
+  if (resultado !== undefined) {
+    const el = document.getElementById('vozResultado');
+    el.textContent = resultado;
+    el.classList.toggle('erro', !!erro);
+  }
+}
+
+function vozToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => { t.classList.remove('show'); t.textContent = 'Configurações salvas ✓'; }, 2600);
+}
+
+function processarComandoVoz(texto) {
+  vozDefinirStatus(undefined, `"${texto}"`, '', false);
+  const r = interpretarComandoVoz(texto);
+  if (r.erro) {
+    vozDefinirStatus('🤔 Não deu certo', undefined, r.erro, true);
+    const det = document.querySelector('.voz-exemplos');
+    if (det) det.open = true;
+    return r;
+  }
+  fecharVoz();
+  vozToast('🎤 ' + r.resumo.split('\n')[0]);
+  r.acao();
+  return r;
+}
+
+function enviarVozDigitado() {
+  const input = document.getElementById('vozDigitado');
+  const texto = input.value.trim();
+  if (!texto) return;
+  input.value = '';
+  if (vozRec && vozOuvindo) { try { vozRec.abort(); } catch (e) {} }
+  processarComandoVoz(texto);
+}
+
+function abrirVoz() {
+  document.getElementById('vozOverlay').classList.remove('hidden');
+  vozDefinirStatus('🎤 Ouvindo...', '', '', false);
+  const det = document.querySelector('.voz-exemplos');
+  if (det) det.open = false;
+  iniciarEscutaVoz();
+}
+
+function fecharVoz() {
+  if (vozRec && vozOuvindo) { try { vozRec.abort(); } catch (e) {} }
+  vozOuvindo = false;
+  document.getElementById('vozFab').classList.remove('ouvindo');
+  document.getElementById('vozOverlay').classList.add('hidden');
+}
+
+function iniciarEscutaVoz() {
+  if (!VozRecog) {
+    vozDefinirStatus('🎤 Voz indisponível', '', 'Este navegador não tem reconhecimento de voz. Use o Chrome — ou digite o comando abaixo.', true);
+    return;
+  }
+  if (vozRec && vozOuvindo) { try { vozRec.abort(); } catch (e) {} }
+  const rec = new VozRecog();
+  vozRec = rec;
+  rec.lang = 'pt-BR';
+  rec.interimResults = true;
+  rec.continuous = false;
+  rec.maxAlternatives = 1;
+  let final = '';
+  rec.onresult = ev => {
+    let parcial = '';
+    for (let i = ev.resultIndex; i < ev.results.length; i++) {
+      const res = ev.results[i];
+      if (res.isFinal) final += res[0].transcript;
+      else parcial += res[0].transcript;
+    }
+    vozDefinirStatus(undefined, final || parcial);
+  };
+  rec.onerror = ev => {
+    vozOuvindo = false;
+    document.getElementById('vozFab').classList.remove('ouvindo');
+    if (ev.error === 'aborted') return;
+    const msg = ev.error === 'not-allowed' || ev.error === 'service-not-allowed'
+      ? 'Permita o uso do microfone para este app (ícone de cadeado / configurações do site no Chrome).'
+      : ev.error === 'no-speech' ? 'Não ouvi nada. Toque em "Falar de novo".'
+      : ev.error === 'network' ? 'Sem internet: o reconhecimento de voz do Chrome precisa de conexão. Você pode digitar o comando.'
+      : 'Erro no reconhecimento de voz: ' + ev.error;
+    vozDefinirStatus('🎤 Parado', undefined, msg, true);
+  };
+  rec.onend = () => {
+    if (vozRec !== rec) return;
+    vozOuvindo = false;
+    document.getElementById('vozFab').classList.remove('ouvindo');
+    const texto = final.trim();
+    if (texto) processarComandoVoz(texto);
+    else if (!document.getElementById('vozResultado').textContent) vozDefinirStatus('🎤 Parado', undefined, 'Não ouvi nada. Toque em "Falar de novo".', true);
+  };
+  try {
+    rec.start();
+    vozOuvindo = true;
+    document.getElementById('vozFab').classList.add('ouvindo');
+    vozDefinirStatus('🎤 Ouvindo... pode falar', '', '', false);
+  } catch (e) {
+    vozDefinirStatus('🎤 Parado', undefined, 'Não foi possível iniciar o microfone.', true);
+  }
 }
 
 // Tabs
@@ -2286,6 +2902,9 @@ function initSettingsFields() {
   atualizarBotoesDiaHorario();
 }
 
+if (copiaPendenteDaOrigem) {
+  try { localStorage.setItem(REGISTROS_KEY, JSON.stringify(converterRegistrosOrigem(copiaPendenteDaOrigem))); } catch (e) {}
+}
 initSettingsFields();
 renderTiersCalc();
 setHistoricoView(historicoView);
@@ -2301,16 +2920,16 @@ if (!document.getElementById('dataRegistro').value) {
 atualizarDiaSemana();
 
 // PWA manifest + icon (inline, no external files needed)
-const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="96" fill="#1565c0"/><text x="256" y="330" font-size="260" text-anchor="middle" fill="white" font-family="Arial, sans-serif">💰</text></svg>`;
+const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="96" fill="#e65100"/><text x="256" y="330" font-size="260" text-anchor="middle" fill="white" font-family="Arial, sans-serif">⏱️</text></svg>`;
 const iconUrl = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgIcon)));
 
 const manifest = {
-  name: 'Horas & Adicionais',
-  short_name: 'Horas',
+  name: 'Horas Extras',
+  short_name: 'H. Extras',
   start_url: '.',
   display: 'standalone',
   background_color: '#0f1b2b',
-  theme_color: '#1e3a5f',
+  theme_color: '#5a2e0f',
   icons: [
     { src: iconUrl, sizes: '512x512', type: 'image/svg+xml' }
   ]
