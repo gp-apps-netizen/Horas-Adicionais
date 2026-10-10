@@ -534,7 +534,7 @@
         ⬆️ Importar backup
         <input type="file" accept="application/json" style="display:none" onchange="importarBackup(event)">
       </label>
-      <div class="hint">Aceita também backups do app Horas &amp; Adicionais — no modo "Só horas extras" as horas normais são removidas.</div>
+      <div class="hint">Aceita também backups do app Horas &amp; Adicionais — as horas normais ficam guardadas e aparecem no modo "Normais + extras".</div>
       <div class="hint">Exporta configurações e todo o histórico para um arquivo que você pode guardar (Drive, WhatsApp etc.) e importar depois — inclusive em outro aparelho.</div>
     </div>
 
@@ -742,7 +742,75 @@ function definirModoContagem(normais) {
   } else if (!document.getElementById('resultados').classList.contains('hidden')) {
     calcular();
   }
+  renderHistorico();
   vozToast(normais ? '🕘 Contando horas normais + extras' : '⏱️ Contando só horas extras');
+}
+
+// Cada registro guarda as linhas do modo em que foi salvo (modoSalvo) e, quando veio
+// do Ponto, as "variantes" (horas normais e adicional noturno calculados nos dois modos).
+// Assim o histórico mostra o registro de acordo com o modo escolhido no botão.
+function calcularVariantes(entrada, saida, feriado, turno, decisoes) {
+  if (!entrada || !saida) return null;
+  const ini = new Date(entrada).getTime(), fim = new Date(saida).getTime();
+  if (!(fim > ini)) return null;
+  const orig = config.contarNormais;
+  const fator = config.noturnoHoraReduzida ? (60 / 52.5) : 1;
+  try {
+    config.contarNormais = false;
+    const a = classificarPeriodo(ini, fim, !!feriado, turno || 'turno1', decisoes);
+    config.contarNormais = true;
+    const b = classificarPeriodo(ini, fim, !!feriado, turno || 'turno1', decisoes);
+    return {
+      normalHoras: (b.buckets['normal'] || 0) / 60,
+      noturnoExtrasHoras: Math.round(a.minutosNoturno * fator) / 60,
+      noturnoNormaisHoras: Math.round(b.minutosNoturno * fator) / 60,
+      salarioHora: config.salarioHora,
+      pctNoturno: config.pctNoturno
+    };
+  } finally {
+    config.contarNormais = orig;
+  }
+}
+
+function modoAtualNome() { return contarNormaisAtivo() ? 'normais' : 'extras'; }
+
+function linhasDoModo(r) {
+  if (!r || r.periculosidadeCiclo || r.dsrCiclo) return (r && r.linhas) || [];
+  const normais = contarNormaisAtivo();
+  const linhas = r.linhas || [];
+  if ((r.modoSalvo || 'extras') === modoAtualNome()) return linhas;
+  const v = r.variantes;
+  if (v) {
+    const base = linhas.filter(l => l.tipo !== 'normal' && l.tipo !== 'noturno');
+    const extras = [];
+    if (normais && v.normalHoras > 0) {
+      extras.push({ nome: 'Salário horista', horas: v.normalHoras, valor: v.normalHoras * v.salarioHora, tipo: 'normal' });
+    }
+    const not = normais ? v.noturnoNormaisHoras : v.noturnoExtrasHoras;
+    if (not > 0) extras.push({ nome: 'Adicional noturno', horas: not, valor: not * v.salarioHora * (v.pctNoturno / 100), tipo: 'noturno' });
+    return extras.concat(base);
+  }
+  return normais ? linhas : linhas.filter(l => l.tipo !== 'normal');
+}
+
+function totalDoModo(r) {
+  if (r.periculosidadeCiclo || r.dsrCiclo) return r.total || 0;
+  return linhasDoModo(r).reduce((s2, l) => s2 + (l.valor || 0), 0);
+}
+
+function migrarRegistrosModo() {
+  let registros;
+  try { registros = JSON.parse(localStorage.getItem(REGISTROS_KEY) || '[]'); } catch (e) { return; }
+  let mudou = false;
+  registros.forEach(r => {
+    if (r.periculosidadeCiclo || r.dsrCiclo) return;
+    if (!r.modoSalvo) { r.modoSalvo = (r.linhas || []).some(l => l.tipo === 'normal') ? 'normais' : 'extras'; mudou = true; }
+    if (r.variantes === undefined) {
+      r.variantes = calcularVariantes(r.pontoEntrada, r.pontoSaida, r.feriado, r.turno, r.decisoesHE);
+      mudou = true;
+    }
+  });
+  if (mudou) localStorage.setItem(REGISTROS_KEY, JSON.stringify(registros));
 }
 
 function alternarAjuda() {
@@ -1828,10 +1896,17 @@ function calcular() {
     turnoNome
   };
 
+  ultimoCalculo.modoSalvo = modoAtualNome();
   if (pontoEntradaVal && pontoSaidaVal) {
     ultimoCalculo.pontoEntrada = pontoEntradaVal;
     ultimoCalculo.pontoSaida = pontoSaidaVal;
     ultimoCalculo.decisoesHE = { ...decisoesHE };
+    ultimoCalculo.feriado = document.getElementById('pontoFeriado').checked;
+    ultimoCalculo.variantes = calcularVariantes(pontoEntradaVal, pontoSaidaVal, ultimoCalculo.feriado, turnoId, decisoesHE);
+  } else {
+    ultimoCalculo.pontoEntrada = '';
+    ultimoCalculo.pontoSaida = '';
+    ultimoCalculo.variantes = null;
   }
 }
 
@@ -1895,13 +1970,14 @@ function editarRegistro(id) {
   atualizarDiaSemana();
 
 
-  const linhaNormal = r.linhas.find(l => l.tipo === 'normal');
-  if (linhaNormal && !contarNormaisAtivo()) { config.contarNormais = true; salvarConfigSilent(); aplicarModoContagemUI(); }
+  const linhasR = linhasDoModo(r);
+  if (typeof r.feriado === 'boolean') document.getElementById('pontoFeriado').checked = r.feriado;
+  const linhaNormal = linhasR.find(l => l.tipo === 'normal');
   const hmNormal = decimalParaHM(linhaNormal ? linhaNormal.horas : 0);
   document.getElementById('horasNormaisH').value = linhaNormal ? hmNormal.h : '';
   document.getElementById('horasNormaisM').value = linhaNormal ? hmNormal.m : '';
 
-  const linhaNoturno = r.linhas.find(l => l.tipo === 'noturno');
+  const linhaNoturno = linhasR.find(l => l.tipo === 'noturno');
   const hmNoturno = decimalParaHM(linhaNoturno ? linhaNoturno.horas : 0);
   document.getElementById('horasNoturnoH').value = linhaNoturno ? hmNoturno.h : '';
   document.getElementById('horasNoturnoM').value = linhaNoturno ? hmNoturno.m : '';
@@ -1910,7 +1986,7 @@ function editarRegistro(id) {
     const idx = parseInt(inputH.dataset.index);
     const inputM = document.querySelector(`.calc-tier-input-m[data-index="${idx}"]`);
     const tier = config.tiers[idx];
-    const linhaHE = r.linhas.find(l => l.tipo === 'he' && l.nome === tier.nome);
+    const linhaHE = linhasR.find(l => l.tipo === 'he' && l.nome === tier.nome);
     const hm = decimalParaHM(linhaHE ? linhaHE.horas : 0);
     inputH.value = linhaHE ? hm.h : '';
     if (inputM) inputM.value = linhaHE ? hm.m : '';
@@ -2037,7 +2113,7 @@ function aplicarPericulosidadeCiclo(chave) {
   let baseSalario = 0;
   let baseHE = 0;
   entradasCiclo.forEach(r => {
-    r.linhas.forEach(l => {
+    linhasDoModo(r).forEach(l => {
       if (l.tipo === 'normal') baseSalario += l.valor;
       if (l.tipo === 'he') baseHE += l.valor;
     });
@@ -2142,7 +2218,7 @@ function aplicarDsrCiclo(chave) {
   let valorHE = 0;
   let valorNoturno = 0;
   entradasCiclo.forEach(r => {
-    r.linhas.forEach(l => {
+    linhasDoModo(r).forEach(l => {
       if (l.tipo === 'he') valorHE += l.valor;
       if (l.tipo === 'noturno') valorNoturno += l.valor;
     });
@@ -2219,12 +2295,14 @@ function recalcularCiclo(chave) {
           if (min > 0) novas.push({ nome: t.nome, horas: min / 60, valor: 0, tipo: 'he' });
         });
         r.linhas = novas;
+        r.modoSalvo = modoAtualNome();
+        r.variantes = calcularVariantes(r.pontoEntrada, r.pontoSaida, r.feriado, r.turno, r.decisoesHE);
         r.horasExtrasTotal = novas.filter(l => l.tipo === 'he').reduce((s2, l) => s2 + l.horas, 0);
         reclassificados++;
       }
     }
 
-    if (!contarNormaisAtivo()) r.linhas = r.linhas.filter(l => l.tipo !== 'normal');
+    // lançamentos manuais mantêm as horas normais guardadas (aparecem só no modo Normais + extras)
     let totalRegistro = 0;
     r.linhas.forEach(l => {
       if (l.tipo === 'normal') {
@@ -2275,7 +2353,7 @@ function renderHistorico() {
   if (historicoView === 'resumo') {
     chaves.forEach(chave => {
       const entradas = grupos[chave];
-      const subtotal = entradas.reduce((s, r) => s + r.total, 0);
+      const subtotal = entradas.reduce((s, r) => s + totalDoModo(r), 0);
       const horasExtrasCiclo = entradas.reduce((s, r) => s + (r.horasExtrasTotal || 0), 0);
 
       let horasNoturnoCiclo = 0, valorNoturnoCiclo = 0;
@@ -2283,7 +2361,7 @@ function renderHistorico() {
       const porFaixaHoras = {};
       const porFaixaValor = {};
       entradas.forEach(r => {
-        r.linhas.forEach(l => {
+        linhasDoModo(r).forEach(l => {
           if (l.tipo === 'normal') {
             horasNormaisCiclo += l.horas;
             valorNormaisCiclo += l.valor;
@@ -2381,7 +2459,7 @@ function renderHistorico() {
 
   chaves.forEach(chave => {
     const entradas = grupos[chave].slice().sort((a, b) => (b.data || '').localeCompare(a.data || ''));
-    const subtotal = entradas.reduce((s, r) => s + r.total, 0);
+    const subtotal = entradas.reduce((s, r) => s + totalDoModo(r), 0);
     const horasExtrasCiclo = entradas.reduce((s, r) => s + (r.horasExtrasTotal || 0), 0);
 
     const header = document.createElement('div');
@@ -2395,7 +2473,7 @@ function renderHistorico() {
     entradas.forEach(r => {
       const card = document.createElement('div');
       card.className = 'card';
-      const linhasHtml = r.linhas.map(l => {
+      const linhasHtml = linhasDoModo(r).map(l => {
         const horarioTexto = horariosDaLinha(l, r);
         return `
         <div class="result-line">
@@ -2416,7 +2494,7 @@ function renderHistorico() {
             </div>
           </div>
           <div style="display:flex; align-items:center; gap:8px;">
-            <span style="color:#a8f0c0; font-weight:600; font-size:15px;">R$ ${fmt(r.total)}</span>
+            <span style="color:#a8f0c0; font-weight:600; font-size:15px;">R$ ${fmt(totalDoModo(r))}</span>
             <button class="remove-tier" style="width:32px;height:32px;font-size:14px; background:#1a3550; color:#4fc3f7;" onclick="event.stopPropagation(); editarRegistro('${r.id}')">✏️</button>
             <button class="remove-tier" style="width:32px;height:32px;font-size:16px;" onclick="event.stopPropagation(); excluirRegistro('${r.id}')">×</button>
           </div>
@@ -2442,6 +2520,7 @@ function toggleDetalhe(id) {
 function exportarBackup() {
   const dados = {
     versao: 1,
+    app: 'horas-extras',
     exportadoEm: new Date().toISOString(),
     config,
     registros: carregarRegistros()
@@ -2461,6 +2540,16 @@ function exportarBackup() {
 // tem entrada/saída do Ponto, recalcula o adicional noturno só nos minutos de HE.
 // Periculosidade/DSR do ciclo são descartados (os valores mudaram) — reaplique pelos botões.
 function converterRegistrosOrigem(lista) {
+  return (lista || []).filter(r => !r.periculosidadeCiclo && !r.dsrCiclo).map(r => {
+    const novo = { ...r, linhas: (r.linhas || []).map(l => ({ ...l })), modoSalvo: 'normais' };
+    novo.variantes = calcularVariantes(r.pontoEntrada, r.pontoSaida, r.feriado, r.turno, r.decisoesHE);
+    novo.total = novo.linhas.reduce((s2, l) => s2 + (l.valor || 0), 0);
+    novo.horasExtrasTotal = novo.linhas.filter(l => l.tipo === 'he').reduce((s2, l) => s2 + (l.horas || 0), 0);
+    return novo;
+  });
+}
+
+function converterRegistrosOrigemAntigo(lista) {
   const fator = config.noturnoHoraReduzida ? (60 / 52.5) : 1;
   return (lista || []).filter(r => !r.periculosidadeCiclo && !r.dsrCiclo).map(r => {
     const novo = { ...r, linhas: (r.linhas || []).filter(l => contarNormaisAtivo() || l.tipo !== 'normal').map(l => ({ ...l })) };
@@ -2493,7 +2582,8 @@ function importarBackup(event) {
         renderTiersCalc();
       }
       if (Array.isArray(dados.registros)) {
-        localStorage.setItem(REGISTROS_KEY, JSON.stringify(converterRegistrosOrigem(dados.registros)));
+        localStorage.setItem(REGISTROS_KEY, JSON.stringify(dados.app === 'horas-extras' ? dados.registros : converterRegistrosOrigem(dados.registros)));
+        migrarRegistrosModo();
         renderHistorico();
       }
       alert('Backup importado com sucesso!');
@@ -3020,6 +3110,7 @@ if (copiaPendenteDaOrigem) {
   try { localStorage.setItem(REGISTROS_KEY, JSON.stringify(converterRegistrosOrigem(copiaPendenteDaOrigem))); } catch (e) {}
 }
 initSettingsFields();
+migrarRegistrosModo();
 renderTiersCalc();
 setHistoricoView(historicoView);
 inicializarCardsColapsaveis();
