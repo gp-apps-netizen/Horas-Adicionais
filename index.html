@@ -1878,7 +1878,10 @@ function atualizarCalculoAoVivo(inicio) {
 
   const valorLive = document.getElementById('pontoValorAoVivo');
   const totalGeral = document.getElementById('totalGeral');
-  if (valorLive && totalGeral) valorLive.textContent = totalGeral.textContent;
+  if (valorLive && totalGeral) {
+    const ad = adicionaisDoTurno((ultimoCalculo && ultimoCalculo.linhas) || [], inicio);
+    valorLive.textContent = `R$ ${fmt(((ultimoCalculo && ultimoCalculo.total) || 0) + ad.peric + ad.dsr)}`;
+  }
 }
 
 const PONTO_NOTIFICAR_KEY = 'horasExtrasApp_pontoNotificar_v1';
@@ -2089,7 +2092,7 @@ function atualizarUIPonto() {
     };
 
     tick();
-    pontoInterval = setInterval(tick, 15000);
+    pontoInterval = setInterval(tick, 5000);
   } else {
     document.getElementById('pontoBotoesInativo').classList.remove('hidden');
     document.getElementById('pontoBotoesAtivo').classList.add('hidden');
@@ -2445,7 +2448,28 @@ function atualizarRelogioPainel() {
     `${h}:${String(m).padStart(2, '0')}<small>:${String(ss).padStart(2, '0')}</small>`;
 }
 
+// Periculosidade / DSR do turno em andamento (quando aplicados no ciclo)
+function adicionaisDoTurno(linhas, inicioMs) {
+  const res = { peric: 0, dsr: 0, temP: false, temD: false };
+  try {
+    const chave = getCicloChave(dataChave(new Date(inicioMs)));
+    const regs = carregarRegistros().filter(r => r.ciclo === chave);
+    if (regs.some(r => r.periculosidadeCiclo)) { res.temP = true; res.peric = valorPericulosidadeCiclo([], linhas); }
+    if (regs.some(r => r.dsrCiclo)) { res.temD = true; res.dsr = valorDsrCiclo(chave, [], linhas); }
+  } catch (e) {}
+  return res;
+}
+
+let proxCache = null;
 function proximaMudancaCategoria(feriado) {
+  const minutoAtual = Math.floor(Date.now() / 60000);
+  if (proxCache && proxCache.min === minutoAtual && proxCache.feriado === feriado && proxCache.modo === contarNormaisAtivo()) return proxCache.valor;
+  const valor = proximaMudancaCategoriaCalc(feriado);
+  proxCache = { min: minutoAtual, feriado, modo: contarNormaisAtivo(), valor };
+  return valor;
+}
+
+function proximaMudancaCategoriaCalc(feriado) {
   const atual = categoriaAgora(feriado);
   const d = new Date();
   d.setSeconds(0, 0);
@@ -2481,12 +2505,14 @@ function infoPainelReal(dados, inicioMs) {
     segmentos = segmentosDoTurno(inicioMs, Date.now(), feriado, dados.turno || 'turno1', decisoesHE).segPrincipal
       .map(sg => ({ chave: sg.chave, ini: sg.inicio.getTime(), fim: sg.fim.getTime() }));
   } catch (e) {}
+  const adTurno = adicionaisDoTurno(((ultimoCalculo && ultimoCalculo.linhas) || []), inicioMs);
   return {
     previa: false,
     inicioMs,
     sub: `${turnoNome ? turnoNome + ' · ' : ''}entrada ${fmtHoraCurta(ini)} (${dias[ini.getDay()]} ${String(ini.getDate()).padStart(2, '0')}/${String(ini.getMonth() + 1).padStart(2, '0')})${feriado || ehFeriadoCadastrado(ini) || ehFeriadoCadastrado(new Date()) ? ' · 📅 feriado' : ''}`,
     agora: categoriaAgora(feriado),
-    valorTxt: document.getElementById('totalGeral').textContent,
+    valorTxt: `R$ ${fmt(((ultimoCalculo && ultimoCalculo.total) || 0) + adTurno.peric + adTurno.dsr)}`,
+    adicionais: adTurno,
     prox: proximaMudancaCategoria(feriado),
     linhas: ((ultimoCalculo && ultimoCalculo.linhas) || []).slice(),
     segmentos,
@@ -2639,6 +2665,9 @@ function desenharPainel(info) {
       <div>${l.tipo === 'normal' ? 'Horas normais' : l.nome}<span class="h">${fmtHM(l.horas)}</span></div>
       ${mostrarValor ? `<div class="v">R$ ${fmt(l.valor)}</div>` : ''}
     </div>`).join('');
+  const ad = info.adicionais || {};
+  if (ad.temP && mostrarValor) html += `<div class="painel-linha"><div>☣️ Periculosidade<span class="h">${String(config.pctPericulosidade).replace('.', ',')}% sobre as horas deste turno</span></div><div class="v">R$ ${fmt(ad.peric)}</div></div>`;
+  if (ad.temD && mostrarValor) html += `<div class="painel-linha"><div>📅 DSR<span class="h">sobre HE + noturno deste turno</span></div><div class="v">R$ ${fmt(ad.dsr)}</div></div>`;
   if (totalHE > 0) html += `<div class="painel-linha total"><div>Total de horas extras</div><div class="v">${fmtHM(totalHE)}</div></div>`;
   document.getElementById('painelDetalhes').innerHTML = html ||
     `<div class="painel-vazio">${contarNormaisAtivo() ? 'Nenhuma hora contada ainda.' : 'Nenhuma hora extra até agora — a contagem começa quando entrar no horário de hora extra.'}</div>`;
