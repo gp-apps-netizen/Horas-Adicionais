@@ -1005,6 +1005,7 @@ function definirModoContagem(normais) {
   } else if (!document.getElementById('resultados').classList.contains('hidden')) {
     calcular();
   }
+  atualizarAdicionaisCiclos(carregarRegistros().filter(r => r.periculosidadeCiclo || r.dsrCiclo).map(r => r.ciclo));
   renderHistorico();
   vozToast(normais ? '🕘 Contando horas normais + extras' : '⏱️ Contando só horas extras');
 }
@@ -2546,6 +2547,19 @@ function resumoCicloPainel(info) {
   });
   res.dias = Object.keys(diasVistos).length;
   somar(info.linhas || [], true);
+  const todos = carregarRegistros().filter(x => x.ciclo === chave);
+  res.temPericulosidade = todos.some(x => x.periculosidadeCiclo);
+  res.temDsr = todos.some(x => x.dsrCiclo);
+  res.valorHoras = res.valor;
+  if (res.temPericulosidade) {
+    res.periculosidade = valorPericulosidadeCiclo(registros, info.linhas || []);
+    res.periculosidadeHoje = res.periculosidade - valorPericulosidadeCiclo(registros, []);
+    res.valor += res.periculosidade;
+  }
+  if (res.temDsr) {
+    res.dsr = valorDsrCiclo(chave, registros, info.linhas || []);
+    res.valor += res.dsr;
+  }
   return res;
 }
 
@@ -2562,8 +2576,14 @@ function htmlResumoCiclo(info, mostrarValor) {
   const itens = [
     `<div class="pr-item"><div class="r">Horas extras no mês</div><div class="n">${fmtHM(r.horasHE)}</div><div class="d">${r.horasHEhoje > 0 ? `+${fmtHM(r.horasHEhoje)} neste turno` : 'neste turno: 0h'}</div></div>`
   ];
-  if (mostrarValor) itens.push(`<div class="pr-item"><div class="r">Valor no mês</div><div class="n verde">R$ ${fmt(r.valor)}</div><div class="d">${r.dias} dia${r.dias === 1 ? '' : 's'} lançado${r.dias === 1 ? '' : 's'} + este turno</div></div>`);
+  if (mostrarValor) itens.push(`<div class="pr-item"><div class="r">Valor no mês</div><div class="n verde">R$ ${fmt(r.valor)}</div><div class="d">${r.temPericulosidade || r.temDsr ? `horas R$ ${fmt(r.valorHoras)}${r.temPericulosidade ? ' + periculosidade' : ''}${r.temDsr ? ' + DSR' : ''}` : `${r.dias} dia${r.dias === 1 ? '' : 's'} lançado${r.dias === 1 ? '' : 's'} + este turno`}</div></div>`);
   else itens.push(`<div class="pr-item"><div class="r">Dias lançados</div><div class="n">${r.dias}</div><div class="d">+ este turno</div></div>`);
+  if (mostrarValor && r.temPericulosidade) {
+    itens.push(`<div class="pr-item"><div class="r">☣️ Periculosidade (${String(config.pctPericulosidade).replace('.', ',')}%)</div><div class="n verde">R$ ${fmt(r.periculosidade)}</div><div class="d">${r.periculosidadeHoje > 0 ? `+R$ ${fmt(r.periculosidadeHoje)} neste turno` : 'atualiza com o turno'}</div></div>`);
+  }
+  if (mostrarValor && r.temDsr) {
+    itens.push(`<div class="pr-item"><div class="r">📅 DSR</div><div class="n verde">R$ ${fmt(r.dsr)}</div><div class="d">sobre HE + noturno</div></div>`);
+  }
   if (r.noturno > 0) itens.push(`<div class="pr-item"><div class="r">Adicional noturno</div><div class="n">${fmtHM(r.noturno)}</div></div>`);
   if (contarNormaisAtivo() && r.normais > 0) itens.push(`<div class="pr-item"><div class="r">Horas normais</div><div class="n">${fmtHM(r.normais)}</div></div>`);
   return `
@@ -2799,9 +2819,11 @@ function salvarRegistro() {
     return;
   }
   const registros = carregarRegistros();
+  const ciclosAfetados = [ultimoCalculo.ciclo];
 
   if (editandoId) {
     const idx = registros.findIndex(r => r.id === editandoId);
+    if (idx !== -1) ciclosAfetados.push(registros[idx].ciclo);
     if (idx !== -1) {
       registros[idx] = { ...registros[idx], ...ultimoCalculo };
     }
@@ -2820,6 +2842,7 @@ function salvarRegistro() {
   if (!localStorage.getItem(PONTO_KEY)) decisoesHE = {};
 
   localStorage.setItem(REGISTROS_KEY, JSON.stringify(registros));
+  atualizarAdicionaisCiclos(ciclosAfetados);
   renderHistorico();
 
   const t = document.getElementById('toast');
@@ -2901,11 +2924,67 @@ function cancelarEdicao() {
   document.getElementById('pontoSaidaInput').value = '';
 }
 
+// ---------- Periculosidade / DSR "vivos" ----------
+// Depois de aplicados no ciclo (botões do Histórico → Resumo), os valores passam a
+// acompanhar os lançamentos: são recalculados ao salvar/excluir dias e, no painel do
+// turno, incluem as horas do turno que está rodando.
+function somarBasesCiclo(entradas, extraLinhas) {
+  let baseSalario = 0, baseHE = 0, baseNoturno = 0;
+  const somar = l => {
+    if (l.tipo === 'normal') baseSalario += l.valor || 0;
+    if (l.tipo === 'he') baseHE += l.valor || 0;
+    if (l.tipo === 'noturno') baseNoturno += l.valor || 0;
+  };
+  entradas.forEach(r => linhasDoModo(r).forEach(somar));
+  (extraLinhas || []).forEach(somar);
+  return { baseSalario, baseHE, baseNoturno };
+}
+
+function valorPericulosidadeCiclo(entradas, extraLinhas) {
+  const b = somarBasesCiclo(entradas, extraLinhas);
+  return (b.baseHE + b.baseSalario) * ((config.pctPericulosidade || 0) / 100);
+}
+
+function valorDsrCiclo(chave, entradas, extraLinhas) {
+  const b = somarBasesCiclo(entradas, extraLinhas);
+  const base = b.baseHE + b.baseNoturno;
+  const { totalDias, domingos, feriados } = contarDiasCiclo(chave);
+  const diasDSR = domingos + feriados;
+  const diasUteis = totalDias - diasDSR;
+  if (base <= 0 || diasUteis <= 0) return 0;
+  return (base / diasUteis) * diasDSR;
+}
+
+function atualizarAdicionaisCiclos(chaves) {
+  const lista = [...new Set((chaves || []).filter(Boolean))];
+  if (!lista.length) return;
+  const registros = carregarRegistros();
+  let mudou = false;
+  lista.forEach(chave => {
+    const entradas = registros.filter(r => r.ciclo === chave && !r.periculosidadeCiclo && !r.dsrCiclo);
+    registros.forEach(r => {
+      if (r.ciclo !== chave) return;
+      if (r.periculosidadeCiclo) {
+        const v = valorPericulosidadeCiclo(entradas);
+        r.total = v; r.linhas = [{ ...(r.linhas[0] || {}), nome: 'Periculosidade do ciclo', horas: null, valor: v, tipo: 'periculosidade' }];
+        mudou = true;
+      } else if (r.dsrCiclo) {
+        const v = valorDsrCiclo(chave, entradas);
+        r.total = v; r.linhas = [{ ...(r.linhas[0] || {}), nome: 'DSR sobre horas extras e adicional noturno', horas: null, valor: v, tipo: 'dsr' }];
+        mudou = true;
+      }
+    });
+  });
+  if (mudou) localStorage.setItem(REGISTROS_KEY, JSON.stringify(registros));
+}
+
 function excluirRegistro(id) {
   if (!confirm('Excluir este registro do histórico?')) return;
   let registros = carregarRegistros();
+  const alvo = registros.find(r => r.id === id);
   registros = registros.filter(r => r.id !== id);
   localStorage.setItem(REGISTROS_KEY, JSON.stringify(registros));
+  if (alvo && !alvo.periculosidadeCiclo && !alvo.dsrCiclo) atualizarAdicionaisCiclos([alvo.ciclo]);
   renderHistorico();
 }
 
@@ -3157,7 +3236,7 @@ function removerDsrCiclo(chave) {
 }
 
 function recalcularCiclo(chave) {
-  if (!confirm('Recalcular todos os lançamentos deste ciclo com as Configurações atuais?\n\nDias registrados pelo Ponto (com entrada e saída) têm as horas reclassificadas com as regras atuais (horários, turnos, entrada antecipada). Dias lançados à mão mantêm as horas — só os valores em R$ são atualizados. Periculosidade e DSR já aplicados precisam ser recalculados separadamente pelos próprios botões.')) return;
+  if (!confirm('Recalcular todos os lançamentos deste ciclo com as Configurações atuais?\n\nDias registrados pelo Ponto (com entrada e saída) têm as horas reclassificadas com as regras atuais (horários, turnos, entrada antecipada). Dias lançados à mão mantêm as horas — só os valores em R$ são atualizados. Periculosidade e DSR já aplicados são atualizados juntos.')) return;
 
   let registros = carregarRegistros();
   let reclassificados = 0;
@@ -3207,6 +3286,7 @@ function recalcularCiclo(chave) {
   });
 
   localStorage.setItem(REGISTROS_KEY, JSON.stringify(registros));
+  atualizarAdicionaisCiclos([chave]);
   renderHistorico();
   alert(`Lançamentos deste ciclo recalculados com os valores atuais.${reclassificados ? `\n\n${reclassificados} dia(s) do Ponto tiveram as horas reclassificadas.` : ''}`);
 }
