@@ -3765,7 +3765,24 @@ function renderHistorico() {
     `;
     container.appendChild(header);
 
-    entradas.forEach(r => {
+    // Periculosidade / DSR do ciclo: não são dias trabalhados — aparecem num quadro próprio
+    const adicionaisCiclo = entradas.filter(r => r.periculosidadeCiclo || r.dsrCiclo);
+    if (adicionaisCiclo.length) {
+      const cardAd = document.createElement('div');
+      cardAd.className = 'card';
+      cardAd.style.cssText = 'border-color:#2f5a3e; background:#16291f;';
+      cardAd.innerHTML = adicionaisCiclo.map(r => `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0;">
+          <div>
+            <div style="font-size:14px; font-weight:600; color:#e8edf4;">${r.periculosidadeCiclo ? `☣️ Periculosidade do ciclo (${String(config.pctPericulosidade).replace('.', ',')}%)` : '📅 DSR do ciclo'}</div>
+            <div style="font-size:11px; color:#7fa8cc;">sobre o ciclo inteiro · atualiza sozinho</div>
+          </div>
+          <span style="color:#a8f0c0; font-weight:600; font-size:15px; white-space:nowrap; margin-left:10px;">R$ ${fmt(totalDoModo(r))}</span>
+        </div>`).join('<div style="border-top:1px solid #2f5a3e; margin:6px 0;"></div>');
+      container.appendChild(cardAd);
+    }
+
+    entradas.filter(r => !r.periculosidadeCiclo && !r.dsrCiclo).forEach(r => {
       const card = document.createElement('div');
       card.className = 'card';
       const linhasHtml = linhasDoModo(r).map(l => {
