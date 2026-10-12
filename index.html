@@ -1998,6 +1998,26 @@ function fecharNotificacaoFixaPonto() {
   }
 }
 
+// Periculosidade aplicada no ciclo do turno? (cache curto: a previsão chama isso muitas vezes)
+let cachePericCiclo = { ts: 0, mapa: {} };
+function periculosidadeAplicadaEm(dataRef) {
+  let ref = dataRef;
+  try {
+    const ativo = JSON.parse(localStorage.getItem(PONTO_KEY) || 'null');
+    if (ativo && ativo.inicio) ref = new Date(ativo.inicio);
+    else {
+      const ent = document.getElementById('pontoEntradaInput').value;
+      if (ent) ref = new Date(ent);
+    }
+  } catch (e) {}
+  const chave = getCicloChave(dataChave(ref));
+  if (Date.now() - cachePericCiclo.ts > 3000) cachePericCiclo = { ts: Date.now(), mapa: {} };
+  if (!(chave in cachePericCiclo.mapa)) {
+    cachePericCiclo.mapa[chave] = carregarRegistros().some(r => r.ciclo === chave && r.periculosidadeCiclo);
+  }
+  return cachePericCiclo.mapa[chave];
+}
+
 function categoriaAgora(forcarFeriado, quandoMs) {
   const agora = quandoMs ? new Date(quandoMs) : new Date();
   const tipoDia = getTipoDia(agora, forcarFeriado);
@@ -2008,9 +2028,11 @@ function categoriaAgora(forcarFeriado, quandoMs) {
   }
 
   const c = classificarMinuto(tipoDia, minutoDoDia);
-  if (c.cat === 'normal') return contarNormaisAtivo() ? 'Hora normal' : 'Hora normal (não conta)';
+  const comPeric = periculosidadeAplicadaEm(agora) && (config.pctPericulosidade || 0) > 0;
+  if (c.cat === 'normal') return contarNormaisAtivo() ? ('Hora normal' + (comPeric ? ' + Periculosidade' : '')) : 'Hora normal (não conta)';
   if (heRecusadaAgora) return 'Hora extra não confirmada (não conta)';
   let categoria = `Hora extra ${String(c.pct).replace('.', ',')}%`;
+  if (comPeric) categoria += ' + Periculosidade';
 
   const noturnoIni = horaParaMinutos(config.noturnoInicio || defaultConfig.noturnoInicio);
   const noturnoFim = horaParaMinutos(config.noturnoFim || defaultConfig.noturnoFim);
@@ -2474,9 +2496,10 @@ function adicionaisDoTurno(linhas, inicioMs) {
 let proxCache = null;
 function proximaMudancaCategoria(feriado) {
   const minutoAtual = Math.floor(Date.now() / 60000);
-  if (proxCache && proxCache.min === minutoAtual && proxCache.feriado === feriado && proxCache.modo === contarNormaisAtivo()) return proxCache.valor;
+  const peric = periculosidadeAplicadaEm(new Date());
+  if (proxCache && proxCache.min === minutoAtual && proxCache.feriado === feriado && proxCache.modo === contarNormaisAtivo() && proxCache.peric === peric) return proxCache.valor;
   const valor = proximaMudancaCategoriaCalc(feriado);
-  proxCache = { min: minutoAtual, feriado, modo: contarNormaisAtivo(), valor };
+  proxCache = { min: minutoAtual, feriado, modo: contarNormaisAtivo(), peric, valor };
   return valor;
 }
 
