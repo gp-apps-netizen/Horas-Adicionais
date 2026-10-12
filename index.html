@@ -428,7 +428,7 @@
       </div>
       <div class="checkbox-row">
         <input type="checkbox" id="pontoFeriado">
-        <label for="pontoFeriado" onclick="if (travado()) { event.preventDefault(); abrirAvisoTrava(); }">Forçar regra de feriado no turno inteiro <span class="badge-trava" id="badgeFeriadoTrava"></span></label>
+        <label for="pontoFeriado">Forçar regra de feriado no turno inteiro <span class="badge-trava" id="badgeFeriadoTrava"></span></label>
       </div>
       <div class="hint hint-fixa" id="avisoFeriadoCadastrado" style="display:none; color:#ffb74d; font-size:12px; margin:-2px 0 8px;"></div>
       <div class="checkbox-row">
@@ -695,7 +695,14 @@
         </div>
         <button class="btn-secondary" style="width:auto; padding:10px 16px; margin-top:0;" onclick="adicionarFeriado()">+ Adicionar</button>
       </div>
+      <div id="feriadosSyncStatus" class="hint hint-fixa" style="margin:10px 0 0; font-size:12px;"></div>
       <div id="listaFeriados" style="margin-top:10px;"></div>
+      <div id="feriadosAdminArea" class="hidden" style="margin-top:12px;">
+        <div id="feriadosPendenteAviso" class="hint hint-fixa" style="color:#ffb74d; font-size:12px; margin-bottom:6px;"></div>
+        <button class="btn-secondary" onclick="publicarFeriados()">📤 Gerar arquivo feriados.json para publicar</button>
+        <button class="btn-secondary" onclick="sincronizarFeriados(true)">🔄 Buscar lista publicada</button>
+      </div>
+      <div class="hint hint-fixa" style="font-size:11px; margin-top:8px;">🏢 oficial = lista do Admin (atualiza sozinha) · 👤 seu = adicionado por você, vale só neste aparelho.</div>
       <div class="hint">As horas trabalhadas nesses dias usam automaticamente a regra de "Feriado" dos Horários do Ponto (das 00:00 às 23:59 do dia). Também entram na contagem de feriados do DSR de cada ciclo.</div>
     </div>
 
@@ -735,7 +742,7 @@
     <div class="card">
       <h2>🔐 Administrador</h2>
       <div class="admin-status"><b id="adminStatusIcone">🔒</b><span id="adminStatusTexto"></span></div>
-      <div class="hint hint-fixa" style="margin-top:8px;">Bloqueadas: Adicional noturno, Faixas de hora extra, Periculosidade, Turnos, Horários do Ponto, Feriados, Intervalos e a opção "Forçar feriado". Valor da hora, aparência, painel, histórico e backup continuam liberados para cada pessoa.</div>
+      <div class="hint hint-fixa" style="margin-top:8px;">Bloqueadas: Adicional noturno, Faixas de hora extra, Periculosidade, Turnos, Horários do Ponto e Intervalos. Valor da hora, feriados, aparência, painel, histórico e backup continuam liberados para cada pessoa. A lista oficial de feriados vem do arquivo feriados.json publicado pelo Admin; cada pessoa pode adicionar ou tirar feriados só para si.</div>
       <button class="btn-secondary" id="adminBtnAlternar" onclick="alternarAdmin()"></button>
       <button class="btn-secondary hidden" id="adminBtnCopiar" onclick="copiarRegrasAdmin()">📋 Copiar regras atuais (para virar o padrão do app)</button>
     </div>
@@ -973,6 +980,11 @@ let copiaPendenteDaOrigem = null;
 })();
 
 let config = loadConfig();
+try {
+  if (!Array.isArray(config.feriadosOficiais)) { config.feriadosOficiais = [...new Set((config.feriados || []))].sort(); }
+  if (!Array.isArray(config.feriadosMeus)) config.feriadosMeus = [];
+  if (!Array.isArray(config.feriadosOcultos)) config.feriadosOcultos = [];
+} catch (e) {}
 
 function contarNormaisAtivo() { return !!config.contarNormais; }
 
@@ -2112,8 +2124,8 @@ function atualizarUIPonto() {
 // não é uma proteção contra quem sabe mexer no código do navegador.
 const ADMIN_PIN_HASH = '7nbgz1erz3';
 const ADMIN_SESSAO_KEY = 'horasExtrasApp_adminLivre';
-const CARDS_TRAVADOS = ['Adicional noturno', 'Faixas de hora extra', 'Periculosidade', 'Turnos', 'Horários do Ponto', 'Feriados', 'Intervalos (Seg-Sex)'];
-const CHAVES_TRAVADAS = ['horariosPonto', 'tiers', 'turnos', 'intervalos', 'pctNoturno', 'noturnoInicio', 'noturnoFim', 'noturnoHoraReduzida', 'pctPericulosidade', 'baseCalcPericulosidade', 'feriados'];
+const CARDS_TRAVADOS = ['Adicional noturno', 'Faixas de hora extra', 'Periculosidade', 'Turnos', 'Horários do Ponto', 'Intervalos (Seg-Sex)'];
+const CHAVES_TRAVADAS = ['horariosPonto', 'tiers', 'turnos', 'intervalos', 'pctNoturno', 'noturnoInicio', 'noturnoFim', 'noturnoHoraReduzida', 'pctPericulosidade', 'baseCalcPericulosidade'];
 
 function hashPin(str, seed = 7) {
   let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
@@ -2156,10 +2168,7 @@ function aplicarTravamentoUI() {
     card.querySelectorAll('input, select, button').forEach(el => { el.disabled = !livre; });
   });
   const fer = document.getElementById('pontoFeriado');
-  if (fer) {
-    fer.disabled = !livre;
-    if (!livre) fer.checked = false;
-  }
+  if (fer) fer.disabled = false;
   const icone = document.getElementById('adminStatusIcone');
   if (icone) {
     icone.textContent = livre ? '🔓' : '🔒';
@@ -2169,8 +2178,10 @@ function aplicarTravamentoUI() {
     document.getElementById('adminBtnAlternar').textContent = livre ? '🔒 Bloquear novamente' : '🔑 Desbloquear (Admin)';
     document.getElementById('adminBtnCopiar').classList.toggle('hidden', !livre);
   }
+  if (typeof renderStatusFeriados === 'function') renderStatusFeriados();
+  if (typeof renderListaFeriados === 'function') renderListaFeriados();
   const bf = document.getElementById('badgeFeriadoTrava');
-  if (bf) bf.textContent = livre ? '' : '🔒';
+  if (bf) bf.textContent = '';
 }
 
 function abrirAvisoTrava() {
@@ -3138,46 +3149,217 @@ function aplicarPericulosidadeCiclo(chave) {
   renderHistorico();
 }
 
-function renderListaFeriados() {
-  const container = document.getElementById('listaFeriados');
-  if (!container) return;
-  const feriados = (config.feriados || []).slice().sort();
+// ===================== FERIADOS SINCRONIZADOS COM O ADMIN =====================
+// A lista oficial fica no arquivo feriados.json, publicado junto com o app no GitHub.
+// Toda vez que o app abre (ou volta para a tela), ele busca esse arquivo e atualiza
+// os feriados de todo mundo. O Admin edita no app e gera um novo feriados.json.
+const FERIADOS_PADRAO = ['2026-09-07', '2026-10-12', '2026-11-02', '2026-11-15', '2026-11-20'];
+const FERIADOS_SYNC_KEY = 'horasExtrasApp_feriadosSync_v1';
+let feriadosSyncInfo = (() => { try { return JSON.parse(localStorage.getItem(FERIADOS_SYNC_KEY) || '{}'); } catch (e) { return {}; } })();
 
-  if (feriados.length === 0) {
-    container.innerHTML = `<div class="hint hint-fixa" style="margin:0;">Nenhum feriado cadastrado ainda.</div>`;
-    return;
-  }
-
-  container.innerHTML = feriados.map(dataStr => `
-    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #1e3450;">
-      <span style="font-size:13px; color:#e8edf4;">${formatarData(dataStr)}</span>
-      <button class="remove-tier" style="width:30px;height:30px;font-size:14px;" onclick="removerFeriado('${dataStr}')">×</button>
-    </div>
-  `).join('');
+function salvarSyncInfo() {
+  try { localStorage.setItem(FERIADOS_SYNC_KEY, JSON.stringify(feriadosSyncInfo)); } catch (e) {}
 }
 
-function adicionarFeriado() {
-  if (travado()) { abrirAvisoTrava(); return; }
-  const input = document.getElementById('novoFeriadoInput');
-  const dataStr = input.value;
-  if (!dataStr) return;
-
-  if (!config.feriados) config.feriados = [];
-  if (!config.feriados.includes(dataStr)) {
-    config.feriados.push(dataStr);
-    salvarConfigSilent();
-  }
-  input.value = '';
-  renderListaFeriados();
-  atualizarAvisoFeriado();
+function normalizarListaFeriados(lista) {
+  return [...new Set((lista || []).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(String(d))))].sort();
 }
 
-function removerFeriado(dataStr) {
-  if (travado()) { abrirAvisoTrava(); return; }
-  config.feriados = (config.feriados || []).filter(d => d !== dataStr);
+// Feriados efetivos de cada pessoa = (lista oficial do Admin − os que ela ocultou) + os que ela adicionou.
+function garantirEstruturaFeriados() {
+  if (!Array.isArray(config.feriadosOficiais)) config.feriadosOficiais = normalizarListaFeriados(config.feriados);
+  if (!Array.isArray(config.feriadosMeus)) config.feriadosMeus = [];
+  if (!Array.isArray(config.feriadosOcultos)) config.feriadosOcultos = [];
+}
+
+function feriadosEfetivos() {
+  garantirEstruturaFeriados();
+  const ocultos = new Set(config.feriadosOcultos);
+  return normalizarListaFeriados(config.feriadosOficiais.filter(d => !ocultos.has(d)).concat(config.feriadosMeus));
+}
+
+function aposMudarFeriados() {
+  const nova = feriadosEfetivos();
+  const mudou = JSON.stringify(nova) !== JSON.stringify(normalizarListaFeriados(config.feriados));
+  config.feriados = nova;
   salvarConfigSilent();
   renderListaFeriados();
   atualizarAvisoFeriado();
+  proxCache = null;
+  if (mudou) {
+    try {
+      atualizarAdicionaisCiclos(carregarRegistros().filter(r => r.dsrCiclo).map(r => r.ciclo));
+      renderHistorico();
+    } catch (e) {}
+  }
+  return mudou;
+}
+
+function aplicarFeriadosOficiais(lista, origem) {
+  garantirEstruturaFeriados();
+  const nova = normalizarListaFeriados(lista);
+  const mudouOficial = JSON.stringify(nova) !== JSON.stringify(normalizarListaFeriados(config.feriadosOficiais));
+  config.feriadosOficiais = nova;
+  // adicionados pela pessoa que agora já estão na lista oficial deixam de ser "seus"
+  config.feriadosMeus = config.feriadosMeus.filter(d => !nova.includes(d));
+  const mudou = aposMudarFeriados() || mudouOficial;
+  return mudou;
+}
+
+async function sincronizarFeriados(manual) {
+  // O Admin com alterações ainda não publicadas não perde o que editou
+  if (feriadosSyncInfo.pendente && !manual) { renderStatusFeriados(); return; }
+  try {
+    const resp = await fetch('feriados.json?t=' + Date.now(), { cache: 'no-store' });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const dados = await resp.json();
+    const lista = Array.isArray(dados) ? dados : dados.feriados;
+    if (!Array.isArray(lista)) throw new Error('formato');
+    const mudou = aplicarFeriadosOficiais(lista, 'servidor');
+    feriadosSyncInfo = { ok: true, em: new Date().toISOString(), atualizadoAdmin: dados.atualizado || '', pendente: false };
+    salvarSyncInfo();
+    if (manual) vozToast(mudou ? '🔄 Feriados atualizados' : '✓ Feriados já estão atualizados');
+  } catch (e) {
+    garantirEstruturaFeriados();
+    if (!feriadosSyncInfo.em && !config.feriadosOficiais.length) aplicarFeriadosOficiais(FERIADOS_PADRAO, 'padrao');
+    feriadosSyncInfo.ok = false;
+    salvarSyncInfo();
+    if (manual) vozToast('⚠️ Sem conexão — usando a última lista');
+  }
+  renderStatusFeriados();
+}
+
+function renderStatusFeriados() {
+  const el = document.getElementById('feriadosSyncStatus');
+  if (!el) return;
+  const em = feriadosSyncInfo.em ? new Date(feriadosSyncInfo.em) : null;
+  const quando = em ? `${String(em.getDate()).padStart(2, '0')}/${String(em.getMonth() + 1).padStart(2, '0')} às ${fmtHoraCurta(em)}` : '';
+  if (feriadosSyncInfo.pendente) {
+    el.innerHTML = '✏️ Você alterou os feriados neste aparelho. <b>Publique</b> para atualizar todo mundo.';
+    el.style.color = '#ffb74d';
+  } else if (feriadosSyncInfo.ok) {
+    el.textContent = `🔄 Lista oficial do Admin${feriadosSyncInfo.atualizadoAdmin ? ` (atualizada em ${formatarData(feriadosSyncInfo.atualizadoAdmin)})` : ''} · conferida ${quando}`;
+    el.style.color = '#8fd4a8';
+  } else if (em) {
+    el.textContent = `⚠️ Sem conexão agora — usando a lista conferida em ${quando}.`;
+    el.style.color = '#ffb74d';
+  } else {
+    el.textContent = '⏳ Buscando a lista oficial de feriados...';
+    el.style.color = '#7fa8cc';
+  }
+  const area = document.getElementById('feriadosAdminArea');
+  if (area) {
+    area.classList.toggle('hidden', !adminLivre());
+    document.getElementById('feriadosPendenteAviso').textContent = feriadosSyncInfo.pendente
+      ? 'Depois de gerar o arquivo, envie o feriados.json para o repositório no GitHub (no mesmo lugar do index.html).'
+      : '';
+  }
+}
+
+function marcarFeriadosPendentes() {
+  feriadosSyncInfo.pendente = true;
+  salvarSyncInfo();
+  renderStatusFeriados();
+}
+
+function publicarFeriados() {
+  const hoje = new Date();
+  garantirEstruturaFeriados();
+  const dados = { atualizado: dataChave(hoje), feriados: normalizarListaFeriados(config.feriadosOficiais) };
+  const blob = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'feriados.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  feriadosSyncInfo.pendente = false;
+  salvarSyncInfo();
+  renderStatusFeriados();
+  alert('Arquivo feriados.json gerado ✓\n\nAgora envie esse arquivo para o repositório do app no GitHub (Add file → Upload files), substituindo o anterior.\n\nDepois disso, todo mundo recebe a lista nova ao abrir o app.');
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') sincronizarFeriados(false);
+});
+
+function renderListaFeriados() {
+  const container = document.getElementById('listaFeriados');
+  if (!container) return;
+  garantirEstruturaFeriados();
+  const admin = adminLivre();
+  const feriados = admin ? normalizarListaFeriados(config.feriadosOficiais.concat(config.feriadosMeus)) : feriadosEfetivos();
+  const oficiais = new Set(config.feriadosOficiais);
+  const dias = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+
+  let html = feriados.length === 0
+    ? `<div class="hint hint-fixa" style="margin:0;">Nenhum feriado cadastrado ainda.</div>`
+    : feriados.map(dataStr => {
+      const ofi = oficiais.has(dataStr);
+      const tag = ofi
+        ? '<span style="font-size:10px; color:#8fd4a8; background:#16352a; border-radius:999px; padding:2px 7px; margin-left:8px;">🏢 oficial</span>'
+        : '<span style="font-size:10px; color:#ffb74d; background:#3d2a10; border-radius:999px; padding:2px 7px; margin-left:8px;">👤 seu</span>';
+      return `
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #1e3450;">
+      <span style="font-size:13px; color:#e8edf4;">${formatarData(dataStr)} <span style="color:#7fa8cc; font-size:11px;">(${dias[new Date(dataStr + 'T00:00:00').getDay()]})</span>${tag}</span>
+      <button class="remove-tier" style="width:30px;height:30px;font-size:14px;" onclick="removerFeriado('${dataStr}')">×</button>
+    </div>`;
+    }).join('');
+
+  if (!admin && config.feriadosOcultos.length) {
+    html += `<div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:10px; font-size:12px; color:#7fa8cc;">
+      <span>${config.feriadosOcultos.length} feriado(s) oficial(is) desativado(s) por você</span>
+      <button class="btn-secondary" style="width:auto; margin-top:0; padding:6px 12px; font-size:12px;" onclick="restaurarFeriadosOcultos()">↩️ Restaurar</button>
+    </div>`;
+  }
+  container.innerHTML = html;
+}
+
+function restaurarFeriadosOcultos() {
+  garantirEstruturaFeriados();
+  config.feriadosOcultos = [];
+  aposMudarFeriados();
+  vozToast('↩️ Feriados oficiais restaurados');
+}
+
+function adicionarFeriado() {
+  const input = document.getElementById('novoFeriadoInput');
+  const dataStr = input.value;
+  if (!dataStr) return;
+  garantirEstruturaFeriados();
+  if (adminLivre()) {
+    // Admin edita a lista oficial (depois publica o feriados.json)
+    if (!config.feriadosOficiais.includes(dataStr)) {
+      config.feriadosOficiais = normalizarListaFeriados(config.feriadosOficiais.concat([dataStr]));
+      marcarFeriadosPendentes();
+    }
+    config.feriadosOcultos = config.feriadosOcultos.filter(d => d !== dataStr);
+  } else if (config.feriadosOcultos.includes(dataStr)) {
+    config.feriadosOcultos = config.feriadosOcultos.filter(d => d !== dataStr);
+  } else if (!config.feriadosOficiais.includes(dataStr) && !config.feriadosMeus.includes(dataStr)) {
+    config.feriadosMeus = normalizarListaFeriados(config.feriadosMeus.concat([dataStr]));
+  }
+  input.value = '';
+  aposMudarFeriados();
+}
+
+function removerFeriado(dataStr) {
+  garantirEstruturaFeriados();
+  if (adminLivre()) {
+    if (config.feriadosOficiais.includes(dataStr)) {
+      config.feriadosOficiais = config.feriadosOficiais.filter(d => d !== dataStr);
+      marcarFeriadosPendentes();
+    }
+    config.feriadosMeus = config.feriadosMeus.filter(d => d !== dataStr);
+  } else if (config.feriadosMeus.includes(dataStr)) {
+    config.feriadosMeus = config.feriadosMeus.filter(d => d !== dataStr);
+  } else if (config.feriadosOficiais.includes(dataStr)) {
+    if (!confirm(`${formatarData(dataStr)} é um feriado da lista oficial do Admin.\n\nDesativar só para você? (Dá para restaurar depois.)`)) return;
+    config.feriadosOcultos = normalizarListaFeriados(config.feriadosOcultos.concat([dataStr]));
+  }
+  aposMudarFeriados();
 }
 
 function contarDiasCiclo(chave) {
@@ -3771,7 +3953,7 @@ function interpretarComandoVoz(textoOriginal) {
     }
   }
   const feriado = /\bferiado\b/.test(t);
-  if (feriado && !ativo && !travado()) {
+  if (feriado && !ativo) {
     preparar.push(() => { document.getElementById('pontoFeriado').checked = true; });
     ajustes.push('feriado');
   }
@@ -4125,6 +4307,8 @@ document.getElementById('pontoNotificarFixa').checked = localStorage.getItem(PON
 atualizarUIPonto();
 atualizarAvisoFeriado();
 setInterval(atualizarAvisoFeriado, 60000);
+renderStatusFeriados();
+sincronizarFeriados(false);
 if (!document.getElementById('dataRegistro').value) {
   document.getElementById('dataRegistro').valueAsDate = new Date();
 }
