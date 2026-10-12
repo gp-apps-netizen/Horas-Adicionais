@@ -699,7 +699,7 @@
       <div id="listaFeriados" style="margin-top:10px;"></div>
       <div id="feriadosAdminArea" class="hidden" style="margin-top:12px;">
         <div id="feriadosPendenteAviso" class="hint hint-fixa" style="color:#ffb74d; font-size:12px; margin-bottom:6px;"></div>
-        <button class="btn-secondary" onclick="publicarFeriados()">📤 Gerar arquivo feriados.json para publicar</button>
+        <button class="btn-secondary" onclick="publicarAdmin()">📤 Publicar regras e feriados (gerar admin.json)</button>
         <button class="btn-secondary" onclick="sincronizarFeriados(true)">🔄 Buscar lista publicada</button>
       </div>
       <div class="hint hint-fixa" style="font-size:11px; margin-top:8px;">🏢 oficial = lista do Admin (atualiza sozinha) · 👤 seu = adicionado por você, vale só neste aparelho.</div>
@@ -742,9 +742,10 @@
     <div class="card">
       <h2>🔐 Administrador</h2>
       <div class="admin-status"><b id="adminStatusIcone">🔒</b><span id="adminStatusTexto"></span></div>
-      <div class="hint hint-fixa" style="margin-top:8px;">Bloqueadas: Adicional noturno, Faixas de hora extra, Periculosidade, Turnos, Horários do Ponto e Intervalos. Valor da hora, feriados, aparência, painel, histórico e backup continuam liberados para cada pessoa. A lista oficial de feriados vem do arquivo feriados.json publicado pelo Admin; cada pessoa pode adicionar ou tirar feriados só para si.</div>
+      <div class="hint hint-fixa" style="margin-top:8px;">Bloqueadas: Adicional noturno, Faixas de hora extra, Periculosidade, Turnos, Horários do Ponto e Intervalos. Valor da hora, feriados, aparência, painel, histórico e backup continuam liberados para cada pessoa. As regras bloqueadas e a lista oficial de feriados vêm do arquivo admin.json publicado pelo Admin e são atualizadas em todos os aparelhos ao abrir o app; cada pessoa pode adicionar ou tirar feriados só para si.</div>
       <button class="btn-secondary" id="adminBtnAlternar" onclick="alternarAdmin()"></button>
-      <button class="btn-secondary hidden" id="adminBtnCopiar" onclick="copiarRegrasAdmin()">📋 Copiar regras atuais (para virar o padrão do app)</button>
+      <div id="adminSyncStatus" class="hint hint-fixa" style="margin-top:8px; font-size:12px;"></div>
+      <button class="btn-secondary hidden" id="adminBtnCopiar" onclick="publicarAdmin()">📤 Publicar regras e feriados (gerar admin.json)</button>
     </div>
 
     <div class="card">
@@ -1149,8 +1150,17 @@ function salvarConfigSilent() {
 }
 
 function salvarConfig(showToast) {
-  const regrasAntes = travado() ? JSON.parse(JSON.stringify(CHAVES_TRAVADAS.reduce((o, k) => (o[k] = config[k], o), {}))) : null;
+  const regrasAntesJSON = JSON.stringify(CHAVES_TRAVADAS.reduce((o, k) => (o[k] = config[k], o), {}));
+  const regrasAntes = travado() ? JSON.parse(regrasAntesJSON) : null;
   salvarConfigInterno();
+  if (!regrasAntes) {
+    const depois = JSON.stringify(CHAVES_TRAVADAS.reduce((o, k) => (o[k] = config[k], o), {}));
+    if (depois !== regrasAntesJSON) {
+      feriadosSyncInfo.regrasPendente = true;
+      salvarSyncInfo();
+      renderStatusFeriados();
+    }
+  }
   if (regrasAntes) {
     Object.assign(config, regrasAntes);
     salvarConfigSilent();
@@ -3229,7 +3239,49 @@ function aplicarFeriadosOficiais(lista, origem) {
   return mudou;
 }
 
+// admin.json = { atualizado, feriados: [...], regras: { horariosPonto, tiers, turnos, ... } }
+// Publicado pelo Admin no GitHub, junto com o index.html. Todo mundo recebe ao abrir o app.
+function aplicarRegrasOficiais(regras) {
+  if (!regras || typeof regras !== 'object') return false;
+  let mudou = false;
+  CHAVES_TRAVADAS.forEach(k => {
+    if (regras[k] === undefined) return;
+    if (JSON.stringify(regras[k]) !== JSON.stringify(config[k])) {
+      config[k] = JSON.parse(JSON.stringify(regras[k]));
+      mudou = true;
+    }
+  });
+  if (mudou) {
+    salvarConfigSilent();
+    try { initSettingsFields(); renderTiersCalc(); popularSelectTurno(); } catch (e) {}
+    proxCache = null;
+    if (localStorage.getItem(PONTO_KEY)) { try { atualizarUIPonto(); } catch (e) {} }
+  }
+  return mudou;
+}
+
 async function sincronizarFeriados(manual) {
+  let dados = null;
+  try {
+    const resp = await fetch('admin.json?t=' + Date.now(), { cache: 'no-store' });
+    if (resp.ok) dados = await resp.json();
+  } catch (e) {}
+  if (!dados || typeof dados !== 'object') return sincronizarFeriadosArquivo(manual);
+
+  let mudouRegras = false, mudouFeriados = false;
+  if (dados.regras && !feriadosSyncInfo.regrasPendente) mudouRegras = aplicarRegrasOficiais(dados.regras);
+  if (Array.isArray(dados.feriados) && !feriadosSyncInfo.pendente) mudouFeriados = aplicarFeriadosOficiais(dados.feriados, 'admin');
+  feriadosSyncInfo = Object.assign(feriadosSyncInfo, {
+    ok: true, em: new Date().toISOString(), atualizadoAdmin: dados.atualizado || '',
+    regrasOficiais: !!dados.regras
+  });
+  salvarSyncInfo();
+  if (mudouRegras && !manual) vozToast('🔄 Regras atualizadas pelo Admin');
+  if (manual) vozToast(mudouRegras || mudouFeriados ? '🔄 Atualizado com a versão do Admin' : '✓ Já está tudo atualizado');
+  renderStatusFeriados();
+}
+
+async function sincronizarFeriadosArquivo(manual) {
   // O Admin com alterações ainda não publicadas não perde o que editou
   if (feriadosSyncInfo.pendente && !manual) { renderStatusFeriados(); return; }
   try {
@@ -3239,7 +3291,7 @@ async function sincronizarFeriados(manual) {
     const lista = Array.isArray(dados) ? dados : dados.feriados;
     if (!Array.isArray(lista)) throw new Error('formato');
     const mudou = aplicarFeriadosOficiais(lista, 'servidor');
-    feriadosSyncInfo = { ok: true, em: new Date().toISOString(), atualizadoAdmin: dados.atualizado || '', pendente: false };
+    feriadosSyncInfo = Object.assign(feriadosSyncInfo, { ok: true, em: new Date().toISOString(), atualizadoAdmin: dados.atualizado || '', pendente: false });
     salvarSyncInfo();
     if (manual) vozToast(mudou ? '🔄 Feriados atualizados' : '✓ Feriados já estão atualizados');
   } catch (e) {
@@ -3252,7 +3304,28 @@ async function sincronizarFeriados(manual) {
   renderStatusFeriados();
 }
 
+function renderStatusAdmin() {
+  const el = document.getElementById('adminSyncStatus');
+  if (!el) return;
+  const em = feriadosSyncInfo.em ? new Date(feriadosSyncInfo.em) : null;
+  const quando = em ? `${String(em.getDate()).padStart(2, '0')}/${String(em.getMonth() + 1).padStart(2, '0')} às ${fmtHoraCurta(em)}` : '';
+  const pend = [];
+  if (feriadosSyncInfo.regrasPendente) pend.push('regras');
+  if (feriadosSyncInfo.pendente) pend.push('feriados');
+  if (pend.length && adminLivre()) {
+    el.innerHTML = `✏️ Você alterou ${pend.join(' e ')} neste aparelho. Toque em <b>Publicar</b> e envie o admin.json para o GitHub para valer para todos.`;
+    el.style.color = '#ffb74d';
+  } else if (feriadosSyncInfo.regrasOficiais) {
+    el.textContent = `🔄 Regras oficiais do Admin${feriadosSyncInfo.atualizadoAdmin ? ` (publicadas em ${formatarData(feriadosSyncInfo.atualizadoAdmin)})` : ''}${quando ? ` · conferidas ${quando}` : ''}`;
+    el.style.color = '#8fd4a8';
+  } else {
+    el.textContent = 'ℹ️ Ainda não há regras publicadas (admin.json). Cada aparelho usa as regras que já tinha.';
+    el.style.color = '#7fa8cc';
+  }
+}
+
 function renderStatusFeriados() {
+  renderStatusAdmin();
   const el = document.getElementById('feriadosSyncStatus');
   if (!el) return;
   const em = feriadosSyncInfo.em ? new Date(feriadosSyncInfo.em) : null;
@@ -3283,6 +3356,27 @@ function marcarFeriadosPendentes() {
   feriadosSyncInfo.pendente = true;
   salvarSyncInfo();
   renderStatusFeriados();
+}
+
+function publicarAdmin() {
+  garantirEstruturaFeriados();
+  const regras = {};
+  CHAVES_TRAVADAS.forEach(k => { regras[k] = config[k]; });
+  const dados = { atualizado: dataChave(new Date()), feriados: normalizarListaFeriados(config.feriadosOficiais), regras };
+  const blob = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'admin.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  feriadosSyncInfo.pendente = false;
+  feriadosSyncInfo.regrasPendente = false;
+  salvarSyncInfo();
+  renderStatusFeriados();
+  alert('Arquivo admin.json gerado ✓ (regras + feriados)\n\nEnvie esse arquivo para o repositório do app no GitHub (Add file → Upload files), no mesmo lugar do index.html, substituindo o anterior.\n\nDepois disso, todos os usuários recebem as regras e os feriados novos ao abrir o app.');
 }
 
 function publicarFeriados() {
