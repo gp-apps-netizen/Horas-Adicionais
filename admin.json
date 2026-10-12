@@ -1,0 +1,143 @@
+{
+  "atualizado": "2026-10-12",
+  "feriados": [
+    "2026-09-07",
+    "2026-10-12",
+    "2026-11-02",
+    "2026-11-15",
+    "2026-11-20"
+  ],
+  "regras": {
+    "horariosPonto": {
+      "semana": [
+        {
+          "inicio": "05:00",
+          "fim": "15:25",
+          "pct": 0
+        },
+        {
+          "inicio": "15:26",
+          "fim": "01:11",
+          "pct": 0
+        },
+        {
+          "inicio": "01:12",
+          "fim": "04:59",
+          "pct": 162.5
+        }
+      ],
+      "sabado": [
+        {
+          "inicio": "05:00",
+          "fim": "21:59",
+          "pct": 75
+        },
+        {
+          "inicio": "22:00",
+          "fim": "23:59",
+          "pct": 162.5
+        },
+        {
+          "inicio": "00:00",
+          "fim": "01:11",
+          "pct": 0
+        },
+        {
+          "inicio": "01:12",
+          "fim": "04:59",
+          "pct": 162.5
+        }
+      ],
+      "domingo": [
+        {
+          "inicio": "00:00",
+          "fim": "04:59",
+          "pct": 200
+        },
+        {
+          "inicio": "05:00",
+          "fim": "21:59",
+          "pct": 100
+        },
+        {
+          "inicio": "22:00",
+          "fim": "23:59",
+          "pct": 200
+        }
+      ],
+      "feriado": [
+        {
+          "inicio": "05:00",
+          "fim": "21:59",
+          "pct": 100
+        },
+        {
+          "inicio": "22:00",
+          "fim": "23:59",
+          "pct": 200
+        },
+        {
+          "inicio": "00:00",
+          "fim": "04:59",
+          "pct": 162.5
+        }
+      ],
+      "segundaMadrugada": [
+        {
+          "inicio": "00:00",
+          "fim": "04:59",
+          "pct": 162.5
+        }
+      ]
+    },
+    "tiers": [
+      {
+        "nome": "Horas Extras 75%",
+        "pct": 75
+      },
+      {
+        "nome": "Horas Extras 100%",
+        "pct": 100
+      },
+      {
+        "nome": "Horas Extras 162,5%",
+        "pct": 162.5
+      },
+      {
+        "nome": "Horas Extras 200%",
+        "pct": 200
+      }
+    ],
+    "turnos": {
+      "turno1": {
+        "nome": "1º Turno",
+        "inicioTipico": "05:00",
+        "heAntecipadaPct": 0
+      },
+      "turno2": {
+        "nome": "2º Turno",
+        "inicioTipico": "15:26",
+        "heAntecipadaPct": 75
+      },
+      "turno3": {
+        "nome": "3º Turno",
+        "inicioTipico": "20:00",
+        "heAntecipadaPct": 0
+      }
+    },
+    "intervalos": {
+      "almocoAtivo": true,
+      "almocoInicio": "12:00",
+      "almocoFim": "13:00",
+      "jantarAtivo": true,
+      "jantarInicio": "20:00",
+      "jantarFim": "21:00"
+    },
+    "pctNoturno": 50,
+    "noturnoInicio": "22:00",
+    "noturnoFim": "01:10",
+    "noturnoHoraReduzida": false,
+    "pctPericulosidade": 30,
+    "baseCalcPericulosidade": "he"
+  }
+}
