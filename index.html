@@ -458,8 +458,17 @@
       <div id="pontoBotoesInativo">
         <button class="btn-primary" onclick="iniciarPonto()">▶️ Iniciar turno agora</button>
       </div>
+      <div id="pontoSegundoPlano" class="hidden" style="background:#2a2410; border:1px solid #6a5420; border-radius:10px; padding:10px 12px; margin-bottom:10px;">
+        <div style="font-size:13px; color:#ffb74d; font-weight:600;">⏸ Turno pausado na tela — continua contando</div>
+        <div style="font-size:12px; color:#d9c79a; margin-top:4px; line-height:1.4;" id="pontoSegundoPlanoTexto"></div>
+        <div style="display:flex; gap:8px; margin-top:10px;">
+          <button class="btn-primary" style="flex:1; margin-top:0;" onclick="voltarAoTurno()">▶ Voltar ao turno</button>
+          <button class="btn-secondary" style="flex:1; margin-top:0;" onclick="finalizarPonto()">⏹ Finalizar turno</button>
+        </div>
+      </div>
       <div id="pontoBotoesAtivo" class="hidden">
         <button class="btn-secondary" style="margin-top:0;" onclick="mostrarPainelTurno()">⛶ Abrir painel do turno</button>
+        <button class="btn-secondary" onclick="pausarTurnoParaLancar()">⏸ Pausar para lançar dias anteriores</button>
         <button class="btn-primary" onclick="finalizarPonto()">⏹ Finalizar turno agora</button>
         <button class="btn-secondary" onclick="cancelarPonto()">Cancelar turno</button>
       </div>
@@ -792,6 +801,7 @@
         <button class="btn-secondary" style="flex:1; margin-top:0;" onclick="minimizarPainelTurno()">📋 Ver app</button>
         <button class="btn-secondary" style="flex:1; margin-top:0; color:#f28b9a;" onclick="cancelarPonto()">Cancelar turno</button>
       </div>
+      <button class="btn-secondary" style="margin-top:0;" onclick="pausarTurnoParaLancar()">⏸ Pausar para lançar dias anteriores</button>
     </div>
     <div class="painel-acoes hidden" id="painelAcoesPrevia">
       <button class="btn-finalizar" style="background:#e65100;" onclick="fecharPreviaPainel()">✓ Fechar prévia</button>
@@ -1569,6 +1579,10 @@ function cancelarPonto() {
 }
 
 function finalizarPonto() {
+  try {
+    const d = JSON.parse(localStorage.getItem(PONTO_KEY) || 'null');
+    if (d && d.segundoPlano) voltarAoTurno();
+  } catch (e) {}
   document.getElementById('pontoSaidaInput').value = paraDatetimeLocal(new Date());
   localStorage.removeItem(PONTO_KEY);
   atualizarUIPonto();
@@ -1755,6 +1769,7 @@ function salvarDecisoesNoPonto() {
   if (!raw) return;
   try {
     const dados = JSON.parse(raw);
+    if (dados.segundoPlano) return;
     dados.decisoesHE = decisoesHE;
     localStorage.setItem(PONTO_KEY, JSON.stringify(dados));
   } catch (e) {}
@@ -2078,6 +2093,13 @@ function pontoEntradaAlterada() {
 function atualizarUIPonto() {
   const raw = localStorage.getItem(PONTO_KEY);
   if (pontoInterval) { clearInterval(pontoInterval); pontoInterval = null; }
+  if (segundoPlanoInterval) { clearInterval(segundoPlanoInterval); segundoPlanoInterval = null; }
+  document.getElementById('pontoSegundoPlano').classList.add('hidden');
+
+  if (raw && JSON.parse(raw).segundoPlano) {
+    renderTurnoSegundoPlano(JSON.parse(raw));
+    return;
+  }
 
   if (raw) {
     const dados = JSON.parse(raw);
@@ -2147,6 +2169,95 @@ function atualizarUIPonto() {
     fecharNotificacaoFixaPonto();
     if (!painelPrevia) { esconderPainelTurno(); painelInicioMs = null; }
   }
+}
+
+// ===================== PAUSAR TURNO (lançar dias anteriores) =====================
+// O turno continua contando (o tempo de trabalho é real), mas a tela fica livre:
+// os campos de Entrada/Saída, Turno e Feriado passam a ser usados para outros dias.
+let segundoPlanoInterval = null;
+
+function pausarTurnoParaLancar(silencioso) {
+  const raw = localStorage.getItem(PONTO_KEY);
+  if (!raw) return;
+  const dados = JSON.parse(raw);
+  if (dados.segundoPlano) return;
+  const ent = document.getElementById('pontoEntradaInput').value;
+  if (ent) dados.inicio = new Date(ent).getTime();
+  dados.turno = document.getElementById('turnoPontoSelect').value || dados.turno;
+  dados.feriado = document.getElementById('pontoFeriado').checked;
+  dados.decisoesHE = { ...(dados.decisoesHE || {}), ...decisoesHE };
+  dados.segundoPlano = true;
+  localStorage.setItem(PONTO_KEY, JSON.stringify(dados));
+
+  decisoesHE = {};
+  heRecusadaAgora = false;
+  ultimoCalculo = null;
+  ['pontoEntradaInput', 'pontoSaidaInput', 'horasNormaisH', 'horasNormaisM', 'horasNoturnoH', 'horasNoturnoM'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.querySelectorAll('.calc-tier-input-h, .calc-tier-input-m').forEach(el => { el.value = ''; });
+  document.getElementById('pontoFeriado').checked = false;
+  document.getElementById('resultados').classList.add('hidden');
+  const ontem = new Date(); ontem.setDate(ontem.getDate() - 1);
+  document.getElementById('dataRegistro').value = dataChave(ontem);
+  atualizarDiaSemana();
+
+  atualizarUIPonto();
+  if (!silencioso) {
+    const tab = document.querySelector('.tab[data-tab="calc"]');
+    if (tab && !tab.classList.contains('active')) tab.click();
+    const card = document.getElementById('cardPonto');
+    if (card) {
+      card.classList.remove('collapsed');
+      card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    vozToast('⏸ Pode lançar os dias anteriores — o turno continua contando');
+  }
+}
+
+function voltarAoTurno() {
+  const raw = localStorage.getItem(PONTO_KEY);
+  if (!raw) return;
+  const dados = JSON.parse(raw);
+  if (editandoId) {
+    editandoId = null;
+    document.getElementById('avisoEdicao').classList.add('hidden');
+  }
+  dados.segundoPlano = false;
+  localStorage.setItem(PONTO_KEY, JSON.stringify(dados));
+  decisoesHE = { ...(dados.decisoesHE || {}) };
+  ultimoCalculo = null;
+  document.getElementById('pontoEntradaInput').value = paraDatetimeLocal(new Date(dados.inicio));
+  document.getElementById('pontoSaidaInput').value = '';
+  const sel = document.getElementById('turnoPontoSelect');
+  if (sel && dados.turno) sel.value = dados.turno;
+  document.getElementById('pontoFeriado').checked = !!dados.feriado;
+  ['horasNormaisH', 'horasNormaisM', 'horasNoturnoH', 'horasNoturnoM'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.querySelectorAll('.calc-tier-input-h, .calc-tier-input-m').forEach(el => { el.value = ''; });
+  painelMinimizado = false;
+  primeiraChecagemPonto = true;
+  atualizarUIPonto();
+}
+
+function renderTurnoSegundoPlano(dados) {
+  document.getElementById('pontoBotoesInativo').classList.add('hidden');
+  document.getElementById('pontoBotoesAtivo').classList.add('hidden');
+  document.getElementById('pontoElapsedWrap').classList.add('hidden');
+  document.getElementById('pontoSegundoPlano').classList.remove('hidden');
+  const sel = document.getElementById('turnoPontoSelect');
+  if (sel) sel.disabled = false;
+  liberarWakeLockPonto();
+  if (!painelPrevia) esconderPainelTurno();
+  const turnos = config.turnos || defaultConfig.turnos;
+  const nomeTurno = (turnos[dados.turno] || {}).nome || '';
+  const atualizar = () => {
+    const ini = new Date(dados.inicio);
+    const dias = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+    const decorrido = fmtHM(Math.max(0, Math.floor((Date.now() - dados.inicio) / 60000)) / 60);
+    document.getElementById('pontoSegundoPlanoTexto').textContent =
+      `${nomeTurno ? nomeTurno + ' · ' : ''}entrada ${fmtHoraCurta(ini)} (${dias[ini.getDay()]} ${String(ini.getDate()).padStart(2, '0')}/${String(ini.getMonth() + 1).padStart(2, '0')}) · ${decorrido} até agora. Use Entrada/Saída abaixo para lançar outros dias e salve no histórico; depois toque em "Voltar ao turno".`;
+    atualizarNotificacaoFixaPonto(decorrido, '', '⏸ Lançando outros dias no app');
+  };
+  atualizar();
+  segundoPlanoInterval = setInterval(atualizar, 30000);
 }
 
 // ===================== TRAVAMENTO (ADMIN) =====================
@@ -2912,7 +3023,10 @@ function salvarRegistro() {
     document.getElementById('pontoEntradaInput').value = '';
     document.getElementById('pontoSaidaInput').value = '';
   }
-  if (!localStorage.getItem(PONTO_KEY)) decisoesHE = {};
+  try {
+    const at = JSON.parse(localStorage.getItem(PONTO_KEY) || 'null');
+    if (!at || at.segundoPlano) decisoesHE = {};
+  } catch (e) { decisoesHE = {}; }
 
   localStorage.setItem(REGISTROS_KEY, JSON.stringify(registros));
   atualizarAdicionaisCiclos(ciclosAfetados);
@@ -2936,6 +3050,10 @@ function editarRegistro(id) {
   const registros = carregarRegistros();
   const r = registros.find(x => x.id === id);
   if (!r) return;
+  try {
+    const at = JSON.parse(localStorage.getItem(PONTO_KEY) || 'null');
+    if (at && !at.segundoPlano) pausarTurnoParaLancar(true);
+  } catch (e) {}
 
   editandoId = id;
   decisoesHE = { ...(r.decisoesHE || {}) };
@@ -4184,22 +4302,26 @@ function interpretarComandoVoz(textoOriginal) {
     if (!explicita && ini.getTime() > agora + 5 * 60000) ini.setDate(ini.getDate() - 1);
     const fim = vozDataHora(ini, saida);
     if (fim <= ini) fim.setDate(fim.getDate() + 1);
-    const salvar = querSalvar || !!ativo;
+    // Com turno rodando, um dia completo falado é um dia anterior: pausa, lança e volta
+    const diaAnterior = !!ativo;
+    const salvar = querSalvar || diaAnterior;
     return {
       resumo: `Entrada ${formatarData(vozDataStr(ini))} ${vozHoraTxt(entrada)} · saída ${vozHoraTxt(saida)}${extra}${salvar ? ' · salvo no histórico' : ''}`,
       acao: comPreparo(() => {
         vozIrParaCalcular();
-        if (ativo) { localStorage.removeItem(PONTO_KEY); atualizarUIPonto(); }
+        const jaPausado = ativo && ativo.segundoPlano;
+        if (diaAnterior && !jaPausado) pausarTurnoParaLancar(true);
         document.getElementById('pontoEntradaInput').value = paraDatetimeLocal(ini);
         document.getElementById('pontoSaidaInput').value = paraDatetimeLocal(fim);
         recalcularPonto(salvar);
+        if (diaAnterior && !jaPausado) voltarAoTurno();
       })
     };
   }
 
   if (saida && !entrada) {
     const entradaVal = document.getElementById('pontoEntradaInput').value;
-    const iniMs = ativo ? (entradaVal ? new Date(entradaVal).getTime() : ativo.inicio) : (entradaVal ? new Date(entradaVal).getTime() : null);
+    const iniMs = ativo ? (ativo.segundoPlano ? ativo.inicio : (entradaVal ? new Date(entradaVal).getTime() : ativo.inicio)) : (entradaVal ? new Date(entradaVal).getTime() : null);
     if (!iniMs) return { erro: 'Diga também o horário de entrada. Ex.: "entrei às 15:26 e saí às 3".' };
     const ini = new Date(iniMs);
     const fim = vozDataHora(ini, saida);
@@ -4209,6 +4331,7 @@ function interpretarComandoVoz(textoOriginal) {
       resumo: `Saída às ${vozHoraTxt(saida)}${ativo ? ' — turno finalizado' : ''}${salvar ? ' · salvo no histórico' : ''}`,
       acao: comPreparo(() => {
         vozIrParaCalcular();
+        if (ativo && ativo.segundoPlano) voltarAoTurno();
         if (ativo) { localStorage.removeItem(PONTO_KEY); atualizarUIPonto(); }
         document.getElementById('pontoEntradaInput').value = paraDatetimeLocal(ini);
         document.getElementById('pontoSaidaInput').value = paraDatetimeLocal(fim);
