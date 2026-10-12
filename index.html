@@ -276,6 +276,60 @@
   .tl-legenda { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 11px; color: var(--psub); margin-top: 6px; }
   .tl-legenda i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
 
+  /* ---- Modelo Cockpit (display de aeronave) ---- */
+  .tema-cockpit { --pbg: #050506; --pd: #3cff3c; --ptxt: #f2f2f2; --psub: #9aa0a8; --pcard: #0d0d10; --pborda: #2b2d31; --pvalor: #3cff3c; }
+  .painel-cockpit { display: none; }
+  .tema-cockpit .painel-cockpit { display: block; }
+  .tema-cockpit .painel-interno > :not(.painel-cockpit) { display: none !important; }
+  .tema-cockpit.painel-turno { padding: 10px 8px 96px; }
+  .painel-cockpit { font-family: 'Roboto Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif; font-weight: 700; letter-spacing: .3px; color: #f2f2f2;
+    background: #0b0b0e; border: 7px solid #26282c; border-radius: 16px; padding: 6px; box-shadow: inset 0 0 0 2px #000, 0 0 0 1px #4a4d53, 0 10px 30px rgba(0,0,0,.6); }
+  .ck-marca { text-align: center; font-size: 10px; color: #6b7078; font-style: italic; letter-spacing: 1.5px; margin: -2px 0 5px; }
+  .ck-verde { color: #3cff3c; } .ck-ciano { color: #2ee6ff; } .ck-magenta { color: #ff5cff; } .ck-ambar { color: #ffb000; } .ck-vermelho { color: #ff3b30; } .ck-branco { color: #f2f2f2; }
+  .ck-pfd { position: relative; height: 255px; overflow: hidden; border: 1px solid #3a3a3a;
+    background: linear-gradient(180deg, #0f55c8 0%, #3d93ee 30%, #8fd0ff 49.6%, #f2c23a 50%, #e07a22 72%, #b2421a 100%); }
+  .ck-horiz { position: absolute; left: 0; right: 0; top: 50%; height: 2px; background: #fff; }
+  .ck-escada { position: absolute; left: 50%; width: 120px; margin-left: -60px; height: 0; border-top: 2px solid rgba(255,255,255,.85); }
+  .ck-escada.curta { width: 60px; margin-left: -30px; }
+  .ck-escada.pont { border-top-style: dashed; }
+  .ck-asa { position: absolute; top: 50%; left: 50%; width: 110px; margin-left: -55px; margin-top: -2px; height: 4px; }
+  .ck-asa:before, .ck-asa:after { content: ''; position: absolute; top: 0; width: 34px; height: 4px; background: #000; border: 1px solid #ffeb3b; }
+  .ck-asa:before { left: 0; } .ck-asa:after { right: 0; }
+  .ck-caixa { position: absolute; background: rgba(0,0,0,.82); border: 2px solid #f2f2f2; padding: 2px 6px; }
+  .ck-topo-e { top: 6px; left: 6px; font-size: 12px; border-color: #3cff3c; color: #3cff3c; padding: 1px 6px; }
+  .ck-topo-d { top: 6px; right: 6px; font-size: 11px; text-align: right; line-height: 1.25; background: none; border: none; color: #ffb000; text-shadow: 0 1px 2px #000; }
+  .ck-fita { position: absolute; top: 40px; bottom: 40px; width: 70px; background: rgba(20,30,60,.55); border: 1px solid rgba(255,255,255,.5); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+  .ck-fita.e { left: 6px; } .ck-fita.d { right: 6px; }
+  .ck-fita .rot { font-size: 10px; color: #2ee6ff; }
+  .ck-fita .val { font-size: 22px; color: #3cff3c; background: #000; border: 2px solid #f2f2f2; padding: 1px 4px; margin: 4px 0; min-width: 58px; font-variant-numeric: tabular-nums; }
+  .ck-fita .sub { font-size: 10px; color: #f2f2f2; }
+  .ck-relogio { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #000; border: 2px solid #f2f2f2; padding: 2px 10px; font-size: 44px; line-height: 1.05; color: #3cff3c; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .ck-relogio small { font-size: 20px; color: #2fbf2f; }
+  .ck-base-e { bottom: 6px; left: 6px; font-size: 11px; background: rgba(0,0,0,.75); border-color: #555; }
+  .ck-base-d { bottom: 6px; right: 6px; font-size: 11px; background: rgba(0,0,0,.75); border-color: #555; color: #2ee6ff; }
+  .ck-hsi { position: relative; background: radial-gradient(circle at 50% 55%, #2a0d06 0%, #4a1407 60%, #200803 100%); border: 1px solid #3a3a3a; border-top: none; padding: 4px 0 2px; }
+  .ck-hsi svg { display: block; width: 100%; max-width: 300px; margin: 0 auto; }
+  .ck-hsi .lado { position: absolute; font-size: 11px; line-height: 1.3; }
+  .ck-sec { border-top: 2px solid #d8d8d8; margin-top: 6px; padding-top: 6px; }
+  .ck-gauges { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; }
+  .ck-g { position: relative; text-align: center; }
+  .ck-g svg { width: 100%; display: block; }
+  .ck-gbox { display: inline-block; margin-top: -14px; position: relative; background: #000; border: 1.5px solid #f2f2f2; color: #3cff3c; font-size: 13px; padding: 0 4px; min-width: 40px; font-variant-numeric: tabular-nums; }
+  .ck-glbl { font-size: 10px; color: #f2f2f2; margin-top: 2px; }
+  .ck-dados { display: grid; grid-template-columns: 1fr auto; gap: 1px 10px; font-size: 13px; margin-top: 6px; }
+  .ck-dados .r { color: #f2f2f2; text-align: right; }
+  .ck-dados .v { color: #3cff3c; text-align: right; font-variant-numeric: tabular-nums; }
+  .ck-cas { font-size: 13px; line-height: 1.45; text-transform: uppercase; }
+  .ck-cas div:first-child:before { content: '› '; }
+  .ck-resumo { border: 2px solid #d8d8d8; margin: 4px 10px 0; padding: 6px 8px; text-align: center; font-size: 12px; }
+  .ck-resumo .lin { display: flex; justify-content: space-between; margin-top: 3px; font-size: 14px; }
+  .ck-teclas { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .ck-teclas button { background: transparent; border: 2px solid #e6e6e6; color: #f2f2f2; font-family: inherit; font-weight: 700; letter-spacing: 1px; font-size: 13px; padding: 10px 6px; cursor: pointer; text-transform: uppercase; }
+  .ck-teclas button.vermelho { border-color: #ff3b30; color: #ff3b30; grid-column: span 2; font-size: 15px; }
+  .ck-rodape { display: flex; justify-content: space-between; font-size: 11px; margin-top: 6px; color: #2ee6ff; }
+  .mini-painel.tema-cockpit { background: linear-gradient(180deg, #1663d6 0%, #6ab4f5 48%, #e08a2a 52%, #a3521c 100%); border: 3px solid #26282c; }
+  .mini-painel.tema-cockpit b { background: #000; border: 1.5px solid #fff; color: #3cff3c; padding: 0 5px; font-size: 18px; font-family: 'Arial Narrow', Arial, sans-serif; }
+  .mini-painel.tema-cockpit span { color: #3cff3c; background: #000; padding: 0 4px; margin-top: 3px; }
   /* ---- Configurações: escolha do modelo ---- */
   .modelos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .modelo-opcao { background: #0f1e30; border: 2px solid #2a4763; border-radius: 12px; padding: 6px; cursor: pointer; text-align: center; color: #c9d6e3; font-size: 12px; }
@@ -777,6 +831,7 @@
   <div class="painel-fundo" id="painelFundo"></div>
   <div class="painel-fundo-veu" id="painelFundoVeu"></div>
   <div class="painel-interno">
+    <div class="painel-cockpit" id="painelCockpit"></div>
     <div class="painel-topo">
       <div>
         <div class="painel-titulo">⏱️ Turno em andamento</div>
@@ -2403,7 +2458,8 @@ const PAINEL_MODELOS = [
   { id: 'amoled', nome: 'Noturno (economia)' },
   { id: 'vibrante', nome: 'Vibrante' },
   { id: 'minimalista', nome: 'Minimalista' },
-  { id: 'cartoes', nome: 'Cartões' }
+  { id: 'cartoes', nome: 'Cartões' },
+  { id: 'cockpit', nome: 'Cockpit (aeronave)' }
 ];
 const PAINEL_CORES = [
   { id: '', nome: 'Padrão', cor: 'conic-gradient(#4fc3f7, #39ff14, #ffb74d, #4fc3f7)' },
@@ -2559,7 +2615,7 @@ function renderOpcoesPainel() {
   if (!grid) return;
   grid.innerHTML = PAINEL_MODELOS.map(m => `
     <div class="modelo-opcao${o.modelo === m.id ? ' ativo' : ''}" onclick="definirOpcaoPainel('modelo', '${m.id}')">
-      <div class="mini-painel tema-${m.id}">${m.id === 'cartoes' ? '<b>1:54</b><span>R$ 66</span><span>1h54</span><span>75%</span>' : '<b>1:54</b><span>R$ 66,50</span>'}</div>
+      <div class="mini-painel tema-${m.id}">${m.id === 'cartoes' ? '<b>1:54</b><span>R$ 66</span><span>1h54</span><span>75%</span>' : m.id === 'cockpit' ? '<b>1:54</b><span>66,50</span>' : '<b>1:54</b><span>R$ 66,50</span>'}</div>
       ${m.nome}
     </div>`).join('');
   document.getElementById('coresPainel').innerHTML = PAINEL_CORES.map(c => `
@@ -2600,6 +2656,10 @@ function atualizarRelogioPainel() {
   const ss = seg % 60;
   document.getElementById('painelRelogio').innerHTML =
     `${h}:${String(m).padStart(2, '0')}<small>:${String(ss).padStart(2, '0')}</small>`;
+  const ck = document.getElementById('ckRelogio');
+  if (ck) ck.innerHTML = `${h}:${String(m).padStart(2, '0')}<small>:${String(ss).padStart(2, '0')}</small>`;
+  const ckh = document.getElementById('ckHoraAgora');
+  if (ckh) { const n = new Date(); ckh.textContent = `${fmtHoraCurta(n)}:${String(n.getSeconds()).padStart(2, '0')}`; }
 }
 
 // Periculosidade / DSR do turno em andamento (quando aplicados no ciclo)
@@ -2774,6 +2834,159 @@ function htmlResumoCiclo(info, mostrarValor) {
     ${faixas ? `<div class="pr-faixas">${faixas}</div>` : ''}`;
 }
 
+// ===================== MODELO COCKPIT =====================
+function ckArco(cx, cy, r, a0, a1) {
+  const p = a => { const rad = (a - 90) * Math.PI / 180; return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)]; };
+  const [x0, y0] = p(a0), [x1, y1] = p(a1);
+  const grande = (a1 - a0) > 180 ? 1 : 0;
+  return `M${x0.toFixed(1)} ${y0.toFixed(1)} A${r} ${r} 0 ${grande} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`;
+}
+
+function ckGauge(rotulo, texto, frac, cor) {
+  frac = Math.max(0, Math.min(1, frac || 0));
+  const a = -120 + 240 * frac;
+  const rad = (a - 90) * Math.PI / 180;
+  const nx = 40 + 27 * Math.cos(rad), ny = 40 + 27 * Math.sin(rad);
+  return `<div class="ck-g"><svg viewBox="0 0 80 58">
+    <path d="${ckArco(40, 40, 30, -120, 96)}" stroke="#e8e8e8" stroke-width="2.5" fill="none"/>
+    <path d="${ckArco(40, 40, 30, 96, 120)}" stroke="#ff3b30" stroke-width="3" fill="none"/>
+    ${frac > 0.005 ? `<path d="${ckArco(40, 40, 30, -120, a)}" stroke="${cor}" stroke-width="5" fill="none"/>` : ''}
+    <line x1="40" y1="40" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}" stroke="${cor}" stroke-width="2.5" stroke-linecap="round"/>
+  </svg><div class="ck-gbox">${texto}</div><div class="ck-glbl">${rotulo}</div></div>`;
+}
+
+function ckHsi(info) {
+  const agora = new Date(info.fimMs);
+  const minAgora = agora.getHours() * 60 + agora.getMinutes();
+  const rot = -minAgora * 0.25;
+  const cx = 110, cy = 112, R = 86;
+  const polar = (a, r) => { const rad = (a - 90) * Math.PI / 180; return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)]; };
+  let t = '';
+  for (let m = 0; m < 1440; m += 30) {
+    const a = m * 0.25 + rot;
+    const hora = m % 60 === 0;
+    const [x0, y0] = polar(a, R);
+    const [x1, y1] = polar(a, R - (hora ? 9 : 5));
+    t += `<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}" stroke="#f2f2f2" stroke-width="${hora ? 1.6 : 1}"/>`;
+    if (hora && (m / 60) % 3 === 0) {
+      const [lx, ly] = polar(a, R - 19);
+      t += `<text x="${lx.toFixed(1)}" y="${(ly + 4).toFixed(1)}" fill="#f2f2f2" font-size="11" font-weight="700" text-anchor="middle" font-family="Arial Narrow, Arial">${String(m / 60).padStart(2, '0')}</text>`;
+    }
+  }
+  let arcos = '';
+  (info.segmentos || []).forEach(sg => {
+    const ini = new Date(sg.ini);
+    const a0 = (ini.getHours() * 60 + ini.getMinutes()) * 0.25 + rot;
+    const span = Math.min(359.5, Math.max(0.6, (sg.fim - sg.ini) / 60000 * 0.25));
+    arcos += `<path d="${ckArco(cx, cy, R - 33, a0, a0 + span)}" stroke="${corDaChave(sg.chave)}" stroke-width="12" fill="none"/>`;
+  });
+  const ent = new Date(info.inicioMs);
+  const aEnt = (ent.getHours() * 60 + ent.getMinutes()) * 0.25 + rot;
+  const [ex, ey] = polar(aEnt, R - 46);
+  return `<svg viewBox="0 0 220 214">
+    <circle cx="${cx}" cy="${cy}" r="${R}" fill="rgba(0,0,0,.55)" stroke="#f2f2f2" stroke-width="1.5"/>
+    ${t}
+    <circle cx="${cx}" cy="${cy}" r="${R - 33}" fill="none" stroke="#2a2a2a" stroke-width="12"/>
+    ${arcos}
+    <circle cx="${cx}" cy="${cy}" r="${R - 52}" fill="none" stroke="#f2f2f2" stroke-width="1" stroke-dasharray="3 4"/>
+    <circle cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="4" fill="#2ee6ff"/>
+    <path d="M${cx} ${cy - 16} L${cx + 3} ${cy - 4} L${cx + 18} ${cy + 2} L${cx + 18} ${cy + 6} L${cx + 3} ${cy + 3} L${cx + 2} ${cy + 12} L${cx + 7} ${cy + 16} L${cx + 7} ${cy + 18} L${cx} ${cy + 16} L${cx - 7} ${cy + 18} L${cx - 7} ${cy + 16} L${cx - 2} ${cy + 12} L${cx - 3} ${cy + 3} L${cx - 18} ${cy + 6} L${cx - 18} ${cy + 2} L${cx - 3} ${cy - 4} Z" fill="#f2f2f2"/>
+    <path d="M${cx - 7} ${cy - R - 1} L${cx + 7} ${cy - R - 1} L${cx} ${cy - R + 9} Z" fill="#f2f2f2"/>
+    <rect x="${cx - 30}" y="0" width="60" height="22" fill="#000" stroke="#f2f2f2" stroke-width="2"/>
+    <text id="ckHoraAgora" x="${cx}" y="16" fill="#3cff3c" font-size="15" font-weight="700" text-anchor="middle" font-family="Arial Narrow, Arial">${fmtHoraCurta(agora)}</text>
+  </svg>`;
+}
+
+function renderCockpit(info) {
+  const el = document.getElementById('painelCockpit');
+  if (!el) return;
+  const visor = config.pontoVisor || defaultConfig.pontoVisor;
+  const mostrarValor = visor.mostrarValor !== false;
+  const linhas = (info.linhas || []).filter(l => l.horas > 0);
+  const totalHE = linhas.filter(l => l.tipo === 'he').reduce((s2, l) => s2 + l.horas, 0);
+  const noturno = linhas.filter(l => l.tipo === 'noturno').reduce((s2, l) => s2 + l.horas, 0);
+  const normais = linhas.filter(l => l.tipo === 'normal').reduce((s2, l) => s2 + l.horas, 0);
+  const ad = info.adicionais || {};
+  const ent = new Date(info.inicioMs);
+  const turnoNome = (info.sub || '').split(' · ')[0] || 'TURNO';
+  const feriado = /feriado/.test(info.sub || '');
+  const valorNum = (info.valorTxt || '').replace('R$', '').trim();
+  const salario = config.salarioHora || 0;
+
+  const avisosTopo = [];
+  avisosTopo.push(contarNormaisAtivo() ? 'NORMAIS + EXTRAS' : 'SÓ EXTRAS');
+  if (ad.temP) avisosTopo.push(`PERIC ${String(config.pctPericulosidade).replace('.', ',')}% ON`);
+  if (feriado) avisosTopo.push('FERIADO');
+
+  // Medidores: uma faixa de HE por medidor (até 4)
+  const faixas = (config.tiers || []).slice().sort((a, b) => a.pct - b.pct).slice(0, 4);
+  const gauges = faixas.map(tr => {
+    const h = linhas.filter(l => l.tipo === 'he' && l.nome === tr.nome).reduce((s2, l) => s2 + l.horas, 0);
+    return ckGauge(`HE ${String(tr.pct).replace('.', ',')}%`, fmtHM(h), h / 12, corDaChave('he' + tr.pct));
+  }).join('');
+
+  // Lista de dados (estilo EICAS)
+  const dados = [['HE TURNO', fmtHM(totalHE)], ['NOTURNO', fmtHM(noturno)]];
+  if (contarNormaisAtivo()) dados.push(['NORMAIS', fmtHM(normais)]);
+  if (mostrarValor) {
+    linhas.forEach(l => { if (l.tipo === 'he') dados.push([l.nome.replace(/^Horas? Extras? /i, 'HE ').toUpperCase() + ' R$', fmt(l.valor)]); });
+    if (ad.temP) dados.push(['PERIC R$', fmt(ad.peric)]);
+    if (ad.temD) dados.push(['DSR R$', fmt(ad.dsr)]);
+  }
+  const dadosHtml = dados.map(([r, v]) => `<div class="r">${r}</div><div class="v">${v}</div>`).join('');
+
+  // Mensagens (CAS)
+  const cas = [];
+  const agoraTxt = (info.agora || '').toUpperCase();
+  if (/NÃO CONTA|NÃO CONFIRMADA|INTERVALO/.test(agoraTxt)) cas.push(['ck-vermelho', agoraTxt]);
+  else if (/HORA EXTRA/.test(agoraTxt)) cas.push(['ck-ambar', agoraTxt.replace('HORA EXTRA', 'HE') + ' ATIVA']);
+  else cas.push(['ck-branco', agoraTxt]);
+  if (info.prox) cas.push(['ck-branco', `PROX ${info.prox.hora} ${info.prox.cat.toUpperCase().replace('HORA EXTRA', 'HE')}`]);
+  if (feriado) cas.push(['ck-ambar', 'FERIADO — REGRA DE FERIADO']);
+  if (ad.temP) cas.push(['ck-ciano', `PERICULOSIDADE ${String(config.pctPericulosidade).replace('.', ',')}% APLICADA`]);
+  if (info.previa) cas.push(['ck-magenta', 'MODO PRÉVIA']);
+  const casHtml = cas.map(([c, t]) => `<div class="${c}">${t}</div>`).join('');
+
+  // Resumo do ciclo
+  let resumoHtml = '';
+  try {
+    const r = resumoCicloPainel(info);
+    resumoHtml = `<div class="ck-resumo"><span class="ck-ciano">CICLO ${mesLabel(r.chave).toUpperCase()}</span>
+      <div class="lin"><span class="ck-verde">HE ${fmtHM(r.horasHE)}</span>${mostrarValor ? `<span class="ck-verde">R$ ${fmt(r.valor)}</span>` : ''}</div>
+      <div class="lin" style="font-size:11px;"><span class="ck-branco">${r.dias} DIAS + TURNO</span><span class="ck-branco">PAG ${getDataPagamento(r.chave)}</span></div></div>`;
+  } catch (e) {}
+
+  const teclas = info.previa
+    ? `<button class="vermelho" style="border-color:#ffb000; color:#ffb000;" onclick="fecharPreviaPainel()">FECHAR PRÉVIA</button>
+       <button onclick="proximoModeloPainel()">🎨 MODELO</button><button onclick="previsualizarPainel()">ATUALIZAR</button>`
+    : `<button class="vermelho" onclick="finalizarPonto()">⏹ FINALIZAR TURNO</button>
+       <button onclick="pausarTurnoParaLancar()">⏸ PAUSAR</button><button onclick="minimizarPainelTurno()">VER APP</button>
+       <button onclick="proximoModeloPainel()">🎨 MODELO</button><button onclick="cancelarPonto()" style="color:#ff3b30;">CANCELAR</button>`;
+
+  el.innerHTML = `
+    <div class="ck-marca">HORAS·EXTRAS AVIONICS</div>
+    <div class="ck-pfd">
+      <div class="ck-escada" style="top:22%"></div><div class="ck-escada curta" style="top:35%"></div>
+      <div class="ck-horiz"></div>
+      <div class="ck-escada curta pont" style="top:64%"></div><div class="ck-escada pont" style="top:78%"></div>
+      <div class="ck-caixa ck-topo-e">${turnoNome.toUpperCase()}</div>
+      <div class="ck-caixa ck-topo-d">${avisosTopo.join('<br>')}</div>
+      <div class="ck-fita e"><div class="rot">HE TURNO</div><div class="val">${fmtHM(totalHE)}</div><div class="sub">NOT ${fmtHM(noturno)}</div></div>
+      <div class="ck-fita d"><div class="rot">R$</div><div class="val" style="font-size:${valorNum.length > 7 ? 15 : 19}px;">${mostrarValor ? valorNum : '----'}</div><div class="sub ck-ciano">${String(salario.toFixed ? salario.toFixed(2) : salario).replace('.', ',')}/H</div></div>
+      <div class="ck-asa"></div>
+      <div class="ck-relogio" id="ckRelogio">0:00<small>:00</small></div>
+      <div class="ck-caixa ck-base-e"><span class="ck-ciano">ENT</span> <span class="ck-verde">${fmtHoraCurta(ent)}</span></div>
+      <div class="ck-caixa ck-base-d">${String(ent.getDate()).padStart(2, '0')}/${String(ent.getMonth() + 1).padStart(2, '0')}</div>
+    </div>
+    <div class="ck-hsi">${ckHsi(info)}</div>
+    <div class="ck-sec"><div class="ck-gauges">${gauges}</div><div class="ck-dados">${dadosHtml}</div></div>
+    <div class="ck-sec ck-cas">${casHtml}</div>
+    <div class="ck-sec">${resumoHtml}</div>
+    <div class="ck-sec ck-teclas">${teclas}</div>
+    <div class="ck-rodape"><span>${info.previa ? 'NO COMM' : 'AUTO SAVE'}</span><span class="ck-verde">${contarNormaisAtivo() ? 'NORM+EXT' : 'EXT ONLY'}</span></div>`;
+  atualizarRelogioPainel();
+}
+
 function desenharPainel(info) {
   ultimoInfoPainel = info;
   const o = opcoesPainel();
@@ -2857,6 +3070,8 @@ function desenharPainel(info) {
     <div class="tl-horas"><span>${fmtHoraCurta(new Date(info.inicioMs))}</span><span>agora ${fmtHoraCurta(new Date(info.fimMs))}</span></div>
     <div class="tl-legenda">${Object.keys(usados).map(k => `<span><i style="background:${corDaChave(k)}"></i>${nomeDaChave(k)}</span>`).join('')}</div>`;
 
+  if (o.modelo === 'cockpit') renderCockpit(info);
+  else document.getElementById('painelCockpit').innerHTML = '';
   painel.classList.remove('hidden');
 }
 
