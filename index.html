@@ -4135,7 +4135,7 @@ function renderHistorico() {
             <span id="seta-${r.id}" style="color:#5f7d99; font-size:11px; display:inline-block; transition: transform .2s;">▶</span>
             <div>
               <div style="font-size:15px; font-weight:600; color:#e8edf4;">${formatarData(r.data)}<span style="font-weight:400; color:#7fa8cc; font-size:11px;"> (${diaSemanaAbrev(r.data)})</span></div>
-              ${r.turnoNome ? `<div style="font-size:11px; color:#5f7d99;">${r.turnoNome}</div>` : ''}
+              ${r.turnoNome || r.pontoEntrada ? `<div style="font-size:11px; color:#5f7d99;">${r.turnoNome || ''}${r.turnoNome && r.pontoEntrada ? ' · ' : ''}${r.pontoEntrada && r.pontoSaida ? `<span style="color:#7fa8cc;">🕒 ${fmtHoraCurta(new Date(r.pontoEntrada))} → ${fmtHoraCurta(new Date(r.pontoSaida))}</span>` : ''}</div>` : ''}
             </div>
           </div>
           <div style="display:flex; align-items:center; gap:8px;">
@@ -4145,6 +4145,7 @@ function renderHistorico() {
           </div>
         </div>
         <div id="${detalheId}" class="hidden" style="margin-top:12px; padding-top:12px; border-top:1px solid #1e3450;">
+          ${htmlEntradaSaida(r)}
           ${linhasHtml}
           ${r.horasExtrasTotal ? `<div class="result-line"><div class="label">Total de horas extras</div><div class="value">${fmtHM(r.horasExtrasTotal)}</div></div>` : ''}
         </div>
@@ -4152,6 +4153,27 @@ function renderHistorico() {
       container.appendChild(card);
     });
   });
+}
+
+function htmlEntradaSaida(r) {
+  if (!(r.pontoEntrada && r.pontoSaida)) {
+    return `<div style="font-size:12px; color:#5f7d99; padding:2px 0 10px;">🕒 Sem horário de entrada/saída registrado — toque em ✏️ para adicionar.</div>`;
+  }
+  const e = new Date(r.pontoEntrada), sd = new Date(r.pontoSaida);
+  const dias = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+  const fmtD = d => `${dias[d.getDay()]} ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')} · <b style="color:#e8edf4; font-size:15px;">${fmtHoraCurta(d)}</b>`;
+  const dur = fmtHM(Math.max(0, Math.round((sd - e) / 60000)) / 60);
+  return `<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
+      <div style="background:#0f1e30; border:1px solid #1e3450; border-radius:10px; padding:8px 10px;">
+        <div style="font-size:10px; color:#7fa8cc; text-transform:uppercase; letter-spacing:.5px;">▶ Entrada</div>
+        <div style="font-size:12px; color:#9db4cc; margin-top:2px;">${fmtD(e)}</div>
+      </div>
+      <div style="background:#0f1e30; border:1px solid #1e3450; border-radius:10px; padding:8px 10px;">
+        <div style="font-size:10px; color:#7fa8cc; text-transform:uppercase; letter-spacing:.5px;">⏹ Saída</div>
+        <div style="font-size:12px; color:#9db4cc; margin-top:2px;">${fmtD(sd)}</div>
+      </div>
+    </div>
+    <div style="font-size:11px; color:#5f7d99; margin:-4px 0 8px;">Turno de ${dur}${r.feriado ? ' · feriado forçado' : ''}</div>`;
 }
 
 function toggleDetalhe(id) {
