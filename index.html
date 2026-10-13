@@ -1637,6 +1637,8 @@ function finalizarPonto() {
   try {
     const d = JSON.parse(localStorage.getItem(PONTO_KEY) || 'null');
     if (d && d.segundoPlano) voltarAoTurno();
+    const entIn = document.getElementById('pontoEntradaInput');
+    if (d && d.inicio && !entIn.value) entIn.value = paraDatetimeLocal(new Date(d.inicio));
   } catch (e) {}
   document.getElementById('pontoSaidaInput').value = paraDatetimeLocal(new Date());
   localStorage.removeItem(PONTO_KEY);
@@ -1884,6 +1886,12 @@ function preencherCamposComBuckets(buckets, inicio, minutosNoturno) {
 }
 
 function recalcularPonto(autoSalvar) {
+  if (!document.getElementById('pontoEntradaInput').value) {
+    try {
+      const at = JSON.parse(localStorage.getItem(PONTO_KEY) || 'null');
+      if (at && !at.segundoPlano && at.inicio) document.getElementById('pontoEntradaInput').value = paraDatetimeLocal(new Date(at.inicio));
+    } catch (e) {}
+  }
   const entradaVal = document.getElementById('pontoEntradaInput').value;
   const saidaVal = document.getElementById('pontoSaidaInput').value;
   const forcarFeriado = document.getElementById('pontoFeriado').checked;
@@ -2158,6 +2166,9 @@ function atualizarUIPonto() {
 
   if (raw) {
     const dados = JSON.parse(raw);
+    // Ao reabrir o app com turno rodando, o campo Entrada volta vazio: restaura do turno salvo
+    const entIn = document.getElementById('pontoEntradaInput');
+    if (entIn && !entIn.value && dados.inicio && !editandoId) entIn.value = paraDatetimeLocal(new Date(dados.inicio));
     if (dados.decisoesHE) decisoesHE = { ...dados.decisoesHE, ...decisoesHE };
     document.getElementById('pontoBotoesInativo').classList.add('hidden');
     document.getElementById('pontoBotoesAtivo').classList.remove('hidden');
